@@ -21,7 +21,6 @@ class Timer:
         total = (self.timeStack[-1][0] - self.timeStack[0][0]) * 1000
         print(f'Total Time: {total} ms')
     def end(self):
-        self.log()
         self.timeStack.clear()
 
 recApp = Blueprint('recommendations', __name__, template_folder='templates')
@@ -182,6 +181,7 @@ def recommendationTest():
     percentage_recommendations_gallery = round(100 * (predictions.gallery == 'Yes').sum() / predictions.shape[0])
 
     timer.check('Calculating final metrics')
+    # timer.log()
     timer.end()
     return {
         'error': errors,
@@ -192,3 +192,24 @@ def recommendationTest():
         'userRecommendations': predictions[predictions.columns if withInfo else ['member_id', 'score']].to_dict(orient='records'),
         'timeframeCounts' : predictions.monthYear.value_counts().to_dict()
     }
+
+@recApp.route('/', methods=['GET'])
+def home():
+    return """
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hello, world!</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="" />
+  <link rel="icon" href="favicon.png">
+</head>
+<body>
+  <h1>nf-recommendation api!</h1>
+  <h2>endpoints:</h2>
+  <h3>/test_recommendation [POST]</h3>
+  <h3>/past-interests/"member_id" [GET]</h3>
+</body>
+</html>
+    """
