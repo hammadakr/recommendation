@@ -3,48 +3,39 @@ import pandas as pd
 import numpy as np
 import datetime
 
-def readExecute(action : callable):
+def getConnection():
     # MySQL connection details
     host = 'localhost'
     user = 'root'
     password = 'password'
     database = 'nfdb'
-
     # Establish a connection to MySQL
-    connection = pymysql.connect(host=host, user=user, password=password, database=database)
+    return pymysql.connect(host=host, user=user, password=password, database=database)
 
+
+def readExecute(action : callable):
+    connection = getConnection()
     try:
         # Create a cursor object to interact with the database
         cursor = connection.cursor()
         return action(cursor)
     except Exception as e:
         print('Error:', e)
-
     finally:
         # Close the connection
         connection.close()
 
 def writeExecute(action : callable) -> None:
-    # MySQL connection details
-    host = 'localhost'
-    user = 'root'
-    password = 'password'
-    database = 'nfdb'
-
-    # Establish a connection to MySQL
-    connection = pymysql.connect(host=host, user=user, password=password, database=database)
-
+    connection = getConnection()
     try:
         # Create a cursor object to interact with the database
         cursor = connection.cursor()
         action(cursor)
         # Commit the changes to the database
         connection.commit()
-        
     except Exception as e:
         print('Error:', e)
         connection.rollback()
-
     finally:
         # Close the cursor and connection
         cursor.close()
