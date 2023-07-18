@@ -300,7 +300,7 @@ def recommendation():
     timer.end() 
     gc.collect()
     return {
-        'ci/cd' : 'success!',
+        'ci/cd' : 'success! second time',
         'error': errors,
         'user': senderInfo,
         'userInterestCount': match_df.shape[0],
