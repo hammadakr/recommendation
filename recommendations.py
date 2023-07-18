@@ -30,10 +30,12 @@ class Timer:
     def end(self):
         self.timeStack.clear()
 
+updationURI = 'userUpdation.feather'
+changedUsers = pd.read_feather(updationURI)
 def addUpdation(updatedUser : pd.DataFrame) -> None:
-    updationURI = 'userUpdation.feather'
-    df = pd.read_feather(updationURI)
-    pd.concat([df, updatedUser]).reset_index().drop(columns=['index']).to_feather(updationURI)
+    global updationURI, changedUsers
+    changedUsers = pd.concat([changedUsers, updatedUser]).reset_index().drop(columns=['index'])
+    changedUsers.to_feather(updationURI)
 
 def getReducedUsers():
     print('running reduced users')
@@ -156,14 +158,12 @@ def prepareUserFormData(member_id, userData):
     return df.drop(columns=['permanent_country'])
 
 
-changedUsers = pd.DataFrame()
-
 @app.route("/recommendation", methods=['POST'])
 def recommendation():
     timer = Timer()
     timer.start()
     errors = []
-    global reducedUsers, encodedUsersOneHot, interest_df, changedUsers
+    global reducedUsers, encodedUsersOneHot, interest_df
     timer.check('Fetching data')
 
     member_id = None
