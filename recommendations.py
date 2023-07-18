@@ -10,6 +10,8 @@ from flask_cors import CORS
 
 import json
 
+import gc
+
 app = Flask(__name__)
 CORS(app)
 
@@ -294,8 +296,9 @@ def recommendation():
     
     predictions.sort_values(by='score', inplace=True, ascending=False)
     timer.check('Calculating final metrics')
-    timer.log()
+    # timer.log()
     timer.end() 
+    gc.collect()
     return {
         'error': errors,
         'user': senderInfo,
