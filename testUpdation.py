@@ -56,5 +56,5 @@ timer.log()
 
 timer.end()
 
-# pd.DataFrame(columns=users.drop(columns=['index']).columns).to_feather('userUpdation.feather')
-print(pd.read_feather('userUpdation.feather'))
+# pd.DataFrame(columns=users.drop(columns=['index']).columns).to_csv('userUpdation.csv', index=False)
+print(pd.read_csv('userUpdation.csv'))

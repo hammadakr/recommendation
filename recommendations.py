@@ -30,12 +30,9 @@ class Timer:
     def end(self):
         self.timeStack.clear()
 
-updationURI = 'userUpdation.feather'
-changedUsers = pd.read_feather(updationURI)
 def addUpdation(updatedUser : pd.DataFrame) -> None:
-    global updationURI, changedUsers
-    changedUsers = pd.concat([changedUsers, updatedUser]).reset_index().drop(columns=['index'])
-    changedUsers.to_feather(updationURI)
+    updationURI = 'userUpdation.csv'
+    updatedUser.to_csv(updationURI, mode='a', index=False, header=False)
 
 def getReducedUsers():
     print('running reduced users')
