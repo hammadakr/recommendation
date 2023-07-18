@@ -159,9 +159,10 @@ def prepareUserFormData(member_id, userData):
 @app.route("/get-user-info/<member_id>", methods=['GET'])
 def getUserInfo(member_id):
     global reducedUsers
+    unnecessaryCols = ['monthYear', 'lastonline', 'lastActiveDate']
     try:
         member_id = int(member_id)
-        results = reducedUsers[reducedUsers.member_id == int(member_id)].to_dict(orient='records')
+        results = reducedUsers[reducedUsers.member_id == int(member_id)].drop(columns=unnecessaryCols).to_dict(orient='records')
         if results:
             return results[0]
         else:
