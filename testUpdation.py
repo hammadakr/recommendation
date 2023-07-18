@@ -55,3 +55,6 @@ timer.log()
 
 
 timer.end()
+
+# pd.DataFrame(columns=users.drop(columns=['index']).columns).to_feather('userUpdation.feather')
+print(pd.read_feather('userUpdation.feather'))
