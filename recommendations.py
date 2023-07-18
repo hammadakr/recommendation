@@ -40,6 +40,7 @@ class Timer:
 
 @cache.cached(timeout=CACHING_TIME, key_prefix='reduced_users')
 def getReducedUsers():
+    print('running reduced users')
     reducedUsers = db.readUsers()
     reducedUsers['lastActiveDate'] = reducedUsers.lastonline.apply(datetime.date.fromtimestamp)
     reducedUsers['monthYear'] = (
