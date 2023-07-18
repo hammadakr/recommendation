@@ -159,7 +159,17 @@ def prepareUserFormData(member_id, userData):
 @app.route("/get-user-info/<member_id>", methods=['GET'])
 def getUserInfo(member_id):
     global reducedUsers
-    return reducedUsers[reducedUsers.member_id == member_id].to_dict(orient='records')[0]
+    try:
+        member_id = int(member_id)
+        results = reducedUsers[reducedUsers.member_id == int(member_id)].to_dict(orient='records')
+        if results:
+            return results[0]
+        else:
+            return "Member id not in data!"
+    except ValueError as verr:
+        return "Exception Encountered: supplied 'member_id' is not an integer!"
+    except Exception as exc:
+        return "Invalid input!"
 
 @app.route("/recommendation", methods=['POST'])
 def recommendation():
