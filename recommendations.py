@@ -156,7 +156,7 @@ def prepareUserFormData(member_id, userData):
 
     return df.drop(columns=['permanent_country'])
 
-@app.route("/get-user-info/<member_id>", methods=['GET']):
+@app.route("/get-user-info/<member_id>", methods=['GET'])
 def getUserInfo(member_id):
     global reducedUsers
     return reducedUsers[reducedUsers.member_id == member_id].to_dict(orient='records')[0]
