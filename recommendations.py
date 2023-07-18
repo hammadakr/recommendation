@@ -284,7 +284,7 @@ def recommendation():
     ).tail(count)
 
     premiumMemberships = predictions.membership == 'Premium'
-    yesGallery = predictions.gallery == 'Yes'
+    yesGallery = predictions.gallery == 1
     #reordering final predictions
     
     predictions.score *= (1 - premiumMix) + premiumMemberships * premiumMix
@@ -300,7 +300,6 @@ def recommendation():
     timer.end() 
     gc.collect()
     return {
-        'ci/cd' : 'success! fnsaoinf time',
         'error': errors,
         'user': senderInfo,
         'userInterestCount': match_df.shape[0],
