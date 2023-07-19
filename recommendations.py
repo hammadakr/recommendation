@@ -233,6 +233,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     # timer.log()
     timer.end() 
     return {
+        'cicd' : 'check',
         'error': errors,
         'user': senderInfo,
         'userInterestCount': match_df.shape[0],
