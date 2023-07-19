@@ -123,7 +123,7 @@ spew = False
 #       None to signal that Python should choose one on its own.
 #
 
-daemon = False
+daemon = True
 pidfile = '/var/run/gunicorn.pid'
 umask = 0
 user = None
