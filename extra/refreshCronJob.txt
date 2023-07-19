@@ -21,4 +21,4 @@
 # For more information see the manual pages of crontab(5) and cron(8)
 # 
 # m h  dom mon dow   command
-*/1 * * * * cd Desktop/nf/api/muneebRecommendations/nf-recommendation/scripts && ./refreshDataScript.sh 
+*/1 * * * * cd /root/recommendation/flask_recommendation/scripts && ./refreshDataScript.sh 

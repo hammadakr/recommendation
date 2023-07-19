@@ -12,7 +12,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             subprocess.check_call(['./launch.sh'], cwd='/root/recommendation/flask_recommendation', shell=True)
         finally:
-            self.send_response(200)
+            self.send_response_only(200)
+            self.end_headers()
+            self.finish()
+            self.connection.close()  
 
 if __name__ == "__main__":
     HTTPServer(("127.0.0.1", 27182), Handler).serve_forever()
