@@ -26,3 +26,15 @@ Every 15 mins (updation):
     Receive all interest activity with timestamp after last updation
     update the live dataframe with these (insertion only)
 """
+
+
+"""
+TODO
+Implement the tasks for updating users and interests 
+Implement the user deactivation and activation
+Setup flask tests with pytest
+figure out why 200 is not sent back to github
+add extensive logging
+documentation 
+
+"""

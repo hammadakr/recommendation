@@ -15,30 +15,17 @@ import gc
 app = Flask(__name__)
 CORS(app)
 
-class Timer: 
-    def __init__(self) -> None:
-        self.timeStack = []
-    def start(self):
-        self.timeStack.append( (time.time(), 'start') )
-    def check(self, name : str = ''):
-        self.timeStack.append( (time.time(), name if name else f'check no. {len(self.timeStack)}') )
-    def log(self):
-        print('Start')
-        for (t0, name0), (t1, name1) in zip(self.timeStack, self.timeStack[1::]):
-            print(f'{name1} took  {(t1 - t0)*1000} ms')
-        print('End')
-        total = (self.timeStack[-1][0] - self.timeStack[0][0]) * 1000
-        print(f'Total Time: {total} ms')
-    def end(self):
-        self.timeStack.clear()
+from scripts.utils import Timer, performWithFileLock
+
+UPDATION_URI = 'userUpdation.csv'
+USERS_URI = 'userExport.feather'
+INTEREST_URI = 'interestExport.feather'
 
 def addUpdation(updatedUser : pd.DataFrame) -> None:
-    updationURI = 'userUpdation.csv'
-    updatedUser.to_csv(updationURI, mode='a', index=False, header=False)
+    performWithFileLock(UPDATION_URI, lambda : updatedUser.to_csv(UPDATION_URI, mode='a', index=False, header=False))
 
 def getReducedUsers():
-    print('running reduced users')
-    reducedUsers = pd.read_feather('userExport.feather')
+    reducedUsers = performWithFileLock(USERS_URI, lambda : pd.read_feather(USERS_URI))
     reducedUsers['lastActiveDate'] = reducedUsers.lastonline.apply(datetime.date.fromtimestamp)
     reducedUsers['monthYear'] = (
         reducedUsers.lastonline.apply(lambda x: datetime.date.fromtimestamp(x).year).astype(str) +
@@ -86,7 +73,10 @@ def getEncodedUsers():
 
 encodedUsersOneHot = getEncodedUsers()
 
-interest_df = pd.read_feather('interestExport.feather')
+def getInterest():
+    return performWithFileLock(INTEREST_URI, lambda : pd.read_feather(INTEREST_URI))
+    
+interest_df = getInterest()
 
 PROFILE_HALF_LIFE_WEEKS = 26
 PROFILE_DECAY_CONSTANT = math.log(2) / PROFILE_HALF_LIFE_WEEKS
@@ -140,8 +130,8 @@ def prepareUserFormData(member_id, userData):
     global popular_cities
     df.loc[(~df.permanent_city.isin(popular_cities.permanent_city)) & (~df.permanent_city.isna()), 'permanent_city'] = 'Others'
     
-    df['gallery'] = df.gallery == 'Yes'
-    df['status'] = df.status == 'Approved'
+    df['gallery'] = (df.gallery == 'Yes').astype(int)
+    df['status'] = (df.status == 'Approved').astype(int)
 
     df['lastonline'] = int(datetime.datetime.now().timestamp())
     df['lastActiveDate'] = df.lastonline.apply(datetime.date.fromtimestamp)
