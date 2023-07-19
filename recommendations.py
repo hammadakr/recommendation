@@ -22,7 +22,7 @@ USERS_URI = 'userExport.feather'
 INTEREST_URI = 'interestExport.feather'
 
 def addUpdation(updatedUser : pd.DataFrame) -> None:
-    performWithFileLock(UPDATION_URI, lambda : updatedUser.to_csv(UPDATION_URI, mode='a', index=False, header=False))
+    performWithFileLock(UPDATION_URI, lambda : updatedUser.drop(columns=['lastActiveDate', 'monthYear']).to_csv(UPDATION_URI, mode='a', index=False, header=False))
 
 def getReducedUsers():
     reducedUsers = performWithFileLock(USERS_URI, lambda : pd.read_feather(USERS_URI))
@@ -37,16 +37,9 @@ def getReducedUsers():
     )
     return reducedUsers
 
-reducedUsers = getReducedUsers()
-
-dummyCols = ['marital_status', 'permanent_state', 'highest_education',
-             'occupation', 'caste', 'sect', 'employed', 'income', 'permanent_city']
-
 def buildNanMap():
     global reducedUsers
     return dict(zip(dummyCols, [[f'{y}_{x}' for x in reducedUsers[y].astype(str).unique() if (x.endswith('nan'))] for y in dummyCols]))
-
-nanMap = buildNanMap()
 
 def getEncodedUsers():
     global dummyCols, nanMap, reducedUsers
@@ -54,8 +47,7 @@ def getEncodedUsers():
     encodedUsersOneHot = {}
     for senderIsFemme in [True, False]:
         tag = ('Female' if senderIsFemme else 'Male')
-        temp = reducedUsers[(reducedUsers.gender != (
-            'Female' if senderIsFemme else 'Male'))]
+        temp = reducedUsers[(reducedUsers.status == 1) & (reducedUsers.gender != ('Female' if senderIsFemme else 'Male'))]
         encodedUsersOneHot[tag] = pd.get_dummies(
             temp[['member_id', 'age'] + dummyCols], columns=dummyCols, dummy_na=True)
 
@@ -71,11 +63,16 @@ def getEncodedUsers():
         
     return encodedUsersOneHot
 
-encodedUsersOneHot = getEncodedUsers()
-
 def getInterest():
     return performWithFileLock(INTEREST_URI, lambda : pd.read_feather(INTEREST_URI))
     
+reducedUsers = getReducedUsers()
+
+dummyCols = ['marital_status', 'permanent_state', 'highest_education',
+             'occupation', 'caste', 'sect', 'employed', 'income', 'permanent_city']
+nanMap = buildNanMap()
+encodedUsersOneHot = getEncodedUsers()
+
 interest_df = getInterest()
 
 PROFILE_HALF_LIFE_WEEKS = 26
@@ -162,78 +159,10 @@ def getUserInfo(member_id):
     except Exception as exc:
         return "Invalid input!"
 
-@app.route("/recommendation", methods=['POST'])
-def recommendation():
+def createRecommendationResults(member_id, userData, offset, count, withInfo, timeMix, premiumMix, galleryMix, errors = []):
     timer = Timer()
     timer.start()
-    errors = []
     global reducedUsers, encodedUsersOneHot, interest_df
-    timer.check('Fetching data')
-
-    member_id = None
-    try:
-        member_id = int(request.form['member_id'])
-    except ValueError as verr:
-        return "Exception Encountered: supplied 'member_id' is not an integer!"
-    except Exception as exc:
-        return "Invalid input!"
-
-    formUserData = json.loads(request.form['userData'])
-    userData = prepareUserFormData(member_id=member_id, userData=formUserData)
-
-    offset = 0
-    try:
-        offset = int(request.form['offset'])
-    except:
-        errors.append(f'Error: invalid offset using default values {offset}')
-
-    count = 50
-    try:
-        count = int(request.form['count'])
-    except:
-        errors.append(f'Error: invalid count using default values {count}')
-
-    withInfo = False
-    try:
-        withInfo = bool(request.form['withInfo'])
-    except:
-        errors.append(
-            f'Error: invalid withInfo using default values {withInfo}')
-        
-    timeMix = 0.25
-    try:
-        timeMix = float(request.form['timeMix'])
-    except:
-        errors.append(
-            f'Error: invalid timeMix using default values {timeMix}')
-    
-    premiumMix = 0.05
-    try:
-        premiumMix = float(request.form['premiumMix'])
-    except:
-        errors.append(
-            f'Error: invalid premiumMix using default values {premiumMix}')
-
-    galleryMix = 0.01
-    try:
-        galleryMix = float(request.form['galleryMix'])
-    except:
-        errors.append(
-            f'Error: invalid galleryMix using default values {galleryMix}')
-
-    if (reducedUsers.member_id == member_id).sum() == 0:
-        pass
-        # changedUsers = pd.concat([changedUsers, userData.drop(columns=['lastActiveDate', 'monthYear'])])
-    else:
-        pass
-        # print('comparision:')
-        # print(userData)
-        # print(reducedUsers[reducedUsers.member_id == member_id])
-        # print(np.equal(userData.values[0], reducedUsers[reducedUsers.member_id == member_id][userData.columns].values[0]))        
-        # changedUsers = pd.concat([changedUsers, userData.drop(columns=['lastActiveDate', 'monthYear'])])
-    addUpdation(userData.drop(columns=['lastActiveDate', 'monthYear']))
-
-    timer.check('Input processing')
 
     senderInfo = userData.to_dict(orient='records')[0]
     senderIsFemme = senderInfo['gender'] == 'Female'
@@ -303,7 +232,6 @@ def recommendation():
     timer.check('Calculating final metrics')
     # timer.log()
     timer.end() 
-    gc.collect()
     return {
         'error': errors,
         'user': senderInfo,
@@ -313,6 +241,71 @@ def recommendation():
         'userRecommendations': predictions[predictions.columns if withInfo else ['member_id', 'score']].to_dict(orient='records'),
         'timeframeCounts' : predictions.monthYear.value_counts().to_dict()
     }
+
+@app.route("/recommendation", methods=['POST'])
+def recommendation():
+    timer = Timer()		
+    timer.start()
+    gc.collect()
+    errors = []
+    timer.check('Fetching data')
+
+    member_id = None
+    try:
+        member_id = int(request.form['member_id'])
+    except ValueError as verr:
+        return "Exception Encountered: supplied 'member_id' is not an integer!", 400
+    except Exception as exc:
+        return "Invalid input!", 400
+
+    formUserData = json.loads(request.form['userData'])
+    userData = prepareUserFormData(member_id=member_id, userData=formUserData)
+
+    controlParams = dict(
+        offset = 0,
+        count = 50,
+        withInfo = False,
+        timeMix = 0.25,
+        premiumMix = 0.05,
+        galleryMix = 0.01
+    )
+    for key, val in controlParams.items():
+        try:
+            controlParams[key] = type(val)(request.form[key])
+        except:
+            errors.append(f'Error: invalid {key} using default values {val}')
+    addUpdation(userData)
+
+    return createRecommendationResults(member_id=member_id, userData=userData, errors=errors, **controlParams)
+ 
+
+def setUserStatus(status):
+    member_id = None
+    try:
+        member_id = int(request.form['member_id'])
+    except ValueError as verr:
+        return "Exception Encountered: supplied 'member_id' is not an integer!", 400
+    except Exception as exc:
+        return "Invalid input!", 400
+    
+    global reducedUsers, encodedUsersOneHot
+    if (reducedUsers.member_id == member_id).sum() == 0:
+        return "member_id not in data!", 400
+    idx = (reducedUsers.member_id == member_id)
+    reducedUsers.loc[idx, 'status'] = status
+    reducedUsers.loc[idx, 'lastonline'] = int(datetime.datetime.now().timestamp())
+
+    encodedUsersOneHot = getEncodedUsers()
+    addUpdation(reducedUsers[reducedUsers.member_id == member_id])
+    return {}, 200
+
+@app.route('/deactivate', methods=['POST'])
+def deactivate():
+    return setUserStatus(status=0);
+ 
+@app.route('/activate', methods=['POST'])
+def activate():
+    return setUserStatus(status=1);
 
 @app.route('/', methods=['GET'])
 def home():
