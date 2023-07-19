@@ -6,7 +6,8 @@ git pull origin
 echo installing dependencies
 pip install -r requirements.txt
 echo killing already running server
-pkill gunicorn
 echo launching server
-gunicorn --bind 127.0.0.1:5000 --daemon main:app
+cat /var/run/gunicorn.pid | xargs kill -HUP
+# gunicorn --bind 127.0.0.1:5000 --daemon main:app
+# gunicorn -c config/gunicorn_config.py main:app
 echo successfully launched!
