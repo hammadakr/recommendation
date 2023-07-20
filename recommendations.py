@@ -17,6 +17,43 @@ CORS(app)
 
 from scripts.utils import Timer, performWithFileLock
 
+import logging
+
+def setup_logger(log_file, log_level=logging.DEBUG):
+    # Create a logger
+    logger = logging.getLogger("MyLogger")
+
+    # Set the log level
+    logger.setLevel(log_level)
+
+    # Create a file handler that logs to the specified file
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(log_level)
+
+    # Create a console handler that logs to the console
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+
+    # Create a formatter to format the log messages
+    log_format = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # Set the formatter for both handlers
+    file_handler.setFormatter(log_format)
+    console_handler.setFormatter(log_format)
+
+    # Add the handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return logger
+
+# Usage example
+logger = setup_logger("my_logfile.log", logging.DEBUG)
+
+
 UPDATION_URI = 'userUpdation.csv'
 USERS_URI = 'userExport.feather'
 INTEREST_URI = 'interestExport.feather'
@@ -116,15 +153,25 @@ def prepareUserFormData(member_id, userData):
         'marital_status', 'permanent_country', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect'
     ]
     status = 'Pending'
+    missing_columns = []
     try:
         status = userData['trust_batch']
     except:
-        status = userData['status']        
+        try: 
+            status = userData['status']        
+        except:
+            missing_columns.append('status/trust_batch')
 
     values = [member_id, status]
     for col in userFormData:
-        val = userData[col]
-        values.append(val if val is not None else np.nan)
+        try:
+            val = userData[col]
+            values.append(val if val is not None else np.nan)
+        except:
+            missing_columns.append(col)
+
+    global logger
+    logger.error(", ".join(missing_columns))
 
     df = pd.DataFrame([dict(zip(['member_id', 'status'] + userFormData, values))])
     df.age = df.age.astype(int)
