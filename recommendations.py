@@ -112,15 +112,21 @@ popular_cities = getPopularCities()
 
 def prepareUserFormData(member_id, userData):
     userFormData = [
-        'age', 'gender', 'membership', 'gallery', 'status',
+        'age', 'gender', 'membership', 'gallery',
         'marital_status', 'permanent_country', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect'
     ]
-    values = [member_id]
+    status = 'Pending'
+    try:
+        status = userData['trust_batch']
+    except:
+        status = userData['status']        
+
+    values = [member_id, status]
     for col in userFormData:
         val = userData[col]
         values.append(val if val is not None else np.nan)
 
-    df = pd.DataFrame([dict(zip(['member_id'] + userFormData, values))])
+    df = pd.DataFrame([dict(zip(['member_id', 'status'] + userFormData, values))])
     df.age = df.age.astype(int)
 
     df.loc[:, 'permanent_state'] = df.apply(lambda row: 'Foreign' if row.permanent_country != 'India' else row.permanent_state, axis=1)
