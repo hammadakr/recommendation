@@ -169,9 +169,9 @@ def prepareUserFormData(member_id, userData):
             values.append(val if val is not None else np.nan)
         except:
             missing_columns.append(col)
-
-    global logger
-    logger.error(", ".join(missing_columns))
+            
+    if missing_columns:
+        raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
     df = pd.DataFrame([dict(zip(['member_id', 'status'] + userFormData, values))])
     df.age = df.age.astype(int)
@@ -298,6 +298,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
 
 @app.route("/recommendation", methods=['POST'])
 def recommendation():
+    global logger
     timer = Timer()		
     timer.start()
     gc.collect()
@@ -313,8 +314,12 @@ def recommendation():
         return "Invalid input!", 400
 
     formUserData = json.loads(request.form['userData'])
-    userData = prepareUserFormData(member_id=member_id, userData=formUserData)
-
+    userData = None
+    try:
+        userData = prepareUserFormData(member_id=member_id, userData=formUserData)
+    except Exception as e:
+        logger.error(e)
+        return f'Error: {e}', 400
     controlParams = dict(
         offset = 0,
         count = 50,
