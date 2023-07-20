@@ -16,3 +16,5 @@ interestExport.feather.lock
 userExport.feather.lock
 userUpdation.csv.lock
 config/__pycache__/
+scripts/cronJobRefresh.log
+my_logfile.log

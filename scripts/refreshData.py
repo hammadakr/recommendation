@@ -3,7 +3,44 @@ import numpy as np
 from utils import performWithFileLock
 import requests
 
+import logging
+
+def setup_logger(log_file, log_level=logging.DEBUG):
+    # Create a logger
+    logger = logging.getLogger("CronRefreshLogger")
+
+    # Set the log level
+    logger.setLevel(log_level)
+
+    # Create a file handler that logs to the specified file
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(log_level)
+
+    # Create a console handler that logs to the console
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+
+    # Create a formatter to format the log messages
+    log_format = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # Set the formatter for both handlers
+    file_handler.setFormatter(log_format)
+    console_handler.setFormatter(log_format)
+
+    # Add the handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return logger
+
+# Usage example
+logger = setup_logger("cronJobRefresh.log", logging.DEBUG)
+
 def updateUsers():
+    global logger
     try:
         USER_URI = '../userExport.feather'
         UPDATES_URI = '../userUpdation.csv'
@@ -26,14 +63,17 @@ def updateUsers():
         users.update(changedUsers.set_index('member_id'))
         users.reset_index(inplace=True)
 
+        logger.info(f'Old users shape: {users.shape}')
         users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
+        logger.info(f'New users shape: {users.shape}')
 
         performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
-        print(f'Updated Users added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
+        logger.info(f'Updated Users added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
     except Exception as e:
-        print('error: ', e)
+        logger.error(e)
 
 def updateInterest():
+    global logger
     INTEREST_URI = '../interestExport/feather'
     INTEREST_API = ''
 
@@ -56,10 +96,10 @@ def updateInterest():
 
         interest = pd.concat([interest, result_df]).reset_index().drop(columns=['index'])
         performWithFileLock(INTEREST_URI, lambda : interest.to_feather(INTEREST_URI))
-        print(f'Updated Interests added {result_df.shape[0]}')
+        logger.info(f'Updated Interests added {result_df.shape[0]}')
 
     except Exception as e:
-        print('Error: ', e)
+        logger.error(e)
 
 if __name__ == '__main__':
     #todo save updation timestamp
