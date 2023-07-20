@@ -66,10 +66,22 @@ def updateUsers():
         logger.info(f'Old users shape: {users.shape}')
         logger.info(f'Gender : {users.gender.dtype}\n{users.gender.tail(1)}')
         users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
+        users = users[users.gender.notna()]
+
+        int8s = ['gallery', 'status']
+        int32s = ['age']
+        int64s = ['lastonline']
+        strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
+        
+        for cols, cols_type in zip([strings, int8s, int32s, int64s], [np.str_, np.int8, np.int32, np.int64]):
+            for col in cols:
+                users[col] = users[col].astype(cols_type)
+
         logger.info(f'New users shape: {users.shape}')
         logger.info(f'Gender : {users.gender.dtype}\n{users.gender.tail(1)}')
         performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
         logger.info(f'Updated Users added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
+    
     except Exception as e:
         logger.error(e)
 
