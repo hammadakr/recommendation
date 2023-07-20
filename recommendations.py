@@ -58,7 +58,7 @@ UPDATION_URI = 'userUpdation.csv'
 USERS_URI = 'userExport.feather'
 INTEREST_URI = 'interestExport.feather'
 
-UPDATED_USERS_COLUMN_FORMAT = performWithFileLock(UPDATION_URI, lambda: pd.read_csv(UPDATION_URI, index_col=0, nrows=0).columns.tolist())
+UPDATED_USERS_COLUMN_FORMAT = performWithFileLock(UPDATION_URI, lambda: pd.read_csv(UPDATION_URI, nrows=0).columns.tolist())
 def addUpdation(updatedUser : pd.DataFrame) -> None:
     performWithFileLock(UPDATION_URI, lambda : updatedUser.drop(columns=['lastActiveDate', 'monthYear'])[UPDATED_USERS_COLUMN_FORMAT].to_csv(UPDATION_URI, mode='a', index=False, header=False))
 
