@@ -53,7 +53,6 @@ def setup_logger(log_file, log_level=logging.DEBUG):
 # Usage example
 logger = setup_logger("my_logfile.log", logging.DEBUG)
 
-
 UPDATION_URI = 'userUpdation.csv'
 USERS_URI = 'userExport.feather'
 INTEREST_URI = 'interestExport.feather'
@@ -150,31 +149,33 @@ popular_cities = getPopularCities()
 
 def prepareUserFormData(member_id, userData):
     userFormData = [
-        'age', 'gender', 'membership', 'gallery',
+        'age', 'gender', 'membership', 'gallery', 'status',
         'marital_status', 'permanent_country', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect'
     ]
-    status = 'Pending'
-    missing_columns = []
-    try:
-        status = userData['trust_batch']
-    except:
-        try: 
-            status = userData['status']        
-        except:
-            missing_columns.append('status/trust_batch')
+    userFormData = dict(zip(userFormData, [ [x] for x in userFormData ]))
+    userFormData['status'].append('trust_batch')
+    userFormData['highest_education'].append('education')
+    userFormData['sect'].append('sub_caste')
 
-    values = [member_id, status]
-    for col in userFormData:
+    missing_columns = []
+    values = [member_id]
+    for col, keys in userFormData.items():
         try:
-            val = userData[col]
-            values.append(val if val is not None else np.nan)
+            for key in keys:
+                if key in userData:
+                    val = userData[key]
+                    values.append(val if (val is not None) or (val != '') else np.nan)
+                    break
+            else:
+                raise Exception('missing column')                
         except:
             missing_columns.append(col)
+
 
     if missing_columns:
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
-    df = pd.DataFrame([dict(zip(['member_id', 'status'] + userFormData, values))])
+    df = pd.DataFrame([dict(zip(['member_id'] + list(userFormData.keys()), values))])
     df.age = df.age.astype(int)
 
     df.loc[:, 'permanent_state'] = df.apply(lambda row: 'Foreign' if row.permanent_country != 'India' else row.permanent_state, axis=1)
