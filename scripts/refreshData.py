@@ -64,9 +64,10 @@ def updateUsers():
         users.reset_index(inplace=True)
 
         logger.info(f'Old users shape: {users.shape}')
+        logger.info(f'Gender : {users.gender.dtype}\n{users.gender.tail(1)}')
         users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
         logger.info(f'New users shape: {users.shape}')
-
+        logger.info(f'Gender : {users.gender.dtype}\n{users.gender.tail(1)}')
         performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
         logger.info(f'Updated Users added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
     except Exception as e:
