@@ -223,7 +223,7 @@ def getUserInfo(member_id):
 def createRecommendationResults(member_id, userData, offset, count, withInfo, timeMix, premiumMix, galleryMix, errors = []):
     timer = Timer()
     timer.start()
-    global reducedUsers, encodedUsersOneHot, interest_df
+    global reducedUsers, encodedUsersOneHot, interest_df, dummyCols
 
     senderInfo = userData.to_dict(orient='records')[0]
     senderIsFemme = senderInfo['gender'] == 'Female'
@@ -236,7 +236,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
 
     values = []
     cols = []
-    for category in ['marital_status', 'permanent_state', 'highest_education', 'occupation', 'caste', 'sect', 'employed']:
+    for category in dummyCols:
         idx = [x for x in preferences.index if x.startswith(category)]
         weight = 5**(preferences[idx].max())
         for tier in idx:
@@ -250,10 +250,8 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
         q=0.8) if senderIsFemme else match_df.age.quantile(0.7)
     
     timer.check('Gathering Preferences')
-    try:
-        scores = oneHotTieredUsers[vector.index].dot(vector)
-    except:
-        logger.info(f'data : {oneHotTieredUsers[vector.index].shape}, vector: {vector.shape}')
+
+    scores = oneHotTieredUsers[vector.index].dot(vector)
     scores += oneHotTieredUsers.age.between(
         ageLowerBound, ageUpperBound).astype(float) * 2
     
