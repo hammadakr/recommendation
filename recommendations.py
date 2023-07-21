@@ -250,9 +250,10 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
         q=0.8) if senderIsFemme else match_df.age.quantile(0.7)
     
     timer.check('Gathering Preferences')
-    # ageLowerBound, ageUpperBound = (match_df.age.quantile(q=0.4), match_df.age.quantile(q=0.6))
-    scores = oneHotTieredUsers[vector.index].dot(vector)
-    # scores -= (oneHotTieredUsers.age - preferences.age).abs()
+    try:
+        scores = oneHotTieredUsers[vector.index].dot(vector)
+    except:
+        logger.log(f'data : {oneHotTieredUsers[vector.index].shape}, vector: {vector.shape}')
     scores += oneHotTieredUsers.age.between(
         ageLowerBound, ageUpperBound).astype(float) * 2
     
@@ -262,7 +263,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
         {'member_id': oneHotTieredUsers.member_id, 'score': scores})
 
     predictions = pd.merge(
-        scoredUsers[['member_id', 'score']].sparse.to_dense(),
+        scoredUsers[['member_id', 'score']],
         reducedUsers, on='member_id'
     )
 
