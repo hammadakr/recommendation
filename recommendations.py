@@ -341,7 +341,7 @@ def recommendation():
             controlParams[key] = type(val)(request.form[key])
         except:
             errors.append(f'Error: invalid {key} using default values {val}')
-    if(userData.status == 1):
+    if (userData.status == 1).sum():
         #only add if user is approved
         addUpdation(userData)
 
