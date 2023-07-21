@@ -253,7 +253,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     try:
         scores = oneHotTieredUsers[vector.index].dot(vector)
     except:
-        logger.log(f'data : {oneHotTieredUsers[vector.index].shape}, vector: {vector.shape}')
+        logger.info(f'data : {oneHotTieredUsers[vector.index].shape}, vector: {vector.shape}')
     scores += oneHotTieredUsers.age.between(
         ageLowerBound, ageUpperBound).astype(float) * 2
     
