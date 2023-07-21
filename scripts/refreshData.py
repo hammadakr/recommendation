@@ -54,17 +54,16 @@ def updateUsers():
 
         newOrChangedUsers = performWithFileLock(UPDATES_URI, readAndClearUpdates)
         newOrChangedUsers = newOrChangedUsers.sort_values('lastonline', ascending=False).drop_duplicates(['member_id'])
+        #only take approved users (need to delete deactivated)
+        newOrChangedUsers = newOrChangedUsers[newOrChangedUsers.status == 1]
 
-        idx = newOrChangedUsers.member_id.isin(users.member_id) & (newOrChangedUsers.status == 1)
-        # deleted_member_ids = newOrChangedUsers[newOrChangedUsers.status == 0].member_id
+        idx = newOrChangedUsers.member_id.isin(users.member_id)
         newUsers = newOrChangedUsers[~idx]
         changedUsers = newOrChangedUsers[idx]
         users.set_index('member_id', inplace=True)
         users.update(changedUsers.set_index('member_id'))
         users.reset_index(inplace=True)
 
-        logger.info(f'Old users shape: {users.shape}')
-        logger.info(f'Gender : {users.gender.dtype}\n{users.gender.tail(1)}')
         users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
         users = users[users.gender.notna()]
 
@@ -77,8 +76,6 @@ def updateUsers():
             for col in cols:
                 users[col] = users[col].astype(cols_type)
 
-        logger.info(f'New users shape: {users.shape}')
-        logger.info(f'Gender : {users.gender.dtype}\n{users.gender.tail(1)}')
         performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
         logger.info(f'Updated Users added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
     
@@ -118,3 +115,4 @@ if __name__ == '__main__':
     #todo save updation timestamp
     updateUsers()
     updateInterest()
+    #todo add server restart

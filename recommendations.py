@@ -81,28 +81,22 @@ def buildNanMap():
 def getEncodedUsers():
     global dummyCols, nanMap, reducedUsers
 
-    encodedUsersOneHot = {}
-    for senderIsFemme in [True, False]:
-        tag = ('Female' if senderIsFemme else 'Male')
-        temp = reducedUsers[(reducedUsers.status == 1) & (reducedUsers.gender != ('Female' if senderIsFemme else 'Male'))]
-        encodedUsersOneHot[tag] = pd.get_dummies(
-            temp[['member_id', 'age'] + dummyCols], columns=dummyCols, dummy_na=True)
+    temp = pd.get_dummies(reducedUsers[['member_id', 'age', 'gender'] + dummyCols], columns=dummyCols, dummy_na=True)
+    for col in dummyCols:
+        nanCols = nanMap[col]
+        idx = np.sum(temp[nanCols].values, axis=1) > 0
+        temp.loc[idx, nanCols] = 0
 
-        for col in dummyCols:
-            nanCols = nanMap[col]
-            dummiedCols = [
-                x for x in encodedUsersOneHot[tag].columns if x.startswith(col)]
-            idx = np.sum(encodedUsersOneHot[tag][nanCols].values, axis=1) > 0
-            encodedUsersOneHot[tag].loc[idx, nanCols] = 0
+    encodedUsersOneHot = {x: temp[temp.gender != x].drop(columns=['gender']).copy(deep=True) for x in ['Male', 'Female']}
 
-        encodedUsersOneHot[tag] = encodedUsersOneHot[tag].astype(
-            pd.SparseDtype("int32", 0))
-        
+    del temp
+    gc.collect()
+                
     return encodedUsersOneHot
 
 def getInterest():
     return performWithFileLock(INTEREST_URI, lambda : pd.read_feather(INTEREST_URI))
-    
+
 reducedUsers = getReducedUsers()
 
 dummyCols = ['marital_status', 'permanent_state', 'highest_education',
@@ -176,7 +170,17 @@ def prepareUserFormData(member_id, userData):
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
     df = pd.DataFrame([dict(zip(['member_id'] + list(userFormData.keys()), values))])
-    df.age = df.age.astype(int)
+    int8s = ['gallery', 'status']
+    int32s = ['age']
+    int64s = ['lastonline']
+    strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
+    
+    MAX_STRING_LENGTH_IN_DATA = 22
+    df[strings] = df[strings].str[:MAX_STRING_LENGTH_IN_DATA]
+
+    for cols, cols_type in zip([strings, int8s, int32s, int64s], [np.str_, np.int8, np.int32, np.int64]):
+        for col in cols:
+            df[col] = df[col].astype(cols_type)
 
     df.loc[:, 'permanent_state'] = df.apply(lambda row: 'Foreign' if row.permanent_country != 'India' else row.permanent_state, axis=1)
     global popular_cities
@@ -335,7 +339,9 @@ def recommendation():
             controlParams[key] = type(val)(request.form[key])
         except:
             errors.append(f'Error: invalid {key} using default values {val}')
-    addUpdation(userData)
+    if(userData.status == 1):
+        #only add if user is approved
+        addUpdation(userData)
 
     return createRecommendationResults(member_id=member_id, userData=userData, errors=errors, **controlParams)
  
