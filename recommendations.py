@@ -176,7 +176,7 @@ def prepareUserFormData(member_id, userData):
     strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
     
     MAX_STRING_LENGTH_IN_DATA = 22
-    df[strings] = df[strings].str[:MAX_STRING_LENGTH_IN_DATA]
+    df[strings] = df[strings].apply(lambda x: x[:MAX_STRING_LENGTH_IN_DATA])
 
     for cols, cols_type in zip([strings, int8s, int32s, int64s], [np.str_, np.int8, np.int32, np.int64]):
         for col in cols:
