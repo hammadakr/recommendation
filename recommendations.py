@@ -170,6 +170,11 @@ def prepareUserFormData(member_id, userData):
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
     df = pd.DataFrame([dict(zip(['member_id'] + list(userFormData.keys()), values))])
+  
+    df['gallery'] = (df.gallery == 'Yes').astype(int)
+    df['status'] = (df.status == 'Approved').astype(int)
+    df['lastonline'] = int(datetime.datetime.now().timestamp())
+  
     int8s = ['gallery', 'status']
     int32s = ['age']
     int64s = ['lastonline']
@@ -187,10 +192,6 @@ def prepareUserFormData(member_id, userData):
     global popular_cities
     df.loc[(~df.permanent_city.isin(popular_cities.permanent_city)) & (~df.permanent_city.isna()), 'permanent_city'] = 'Others'
     
-    df['gallery'] = (df.gallery == 'Yes').astype(int)
-    df['status'] = (df.status == 'Approved').astype(int)
-
-    df['lastonline'] = int(datetime.datetime.now().timestamp())
     df['lastActiveDate'] = df.lastonline.apply(datetime.date.fromtimestamp)
     df['monthYear'] = (
         df.lastonline.apply(lambda x: datetime.date.fromtimestamp(x).year).astype(str) +
