@@ -87,7 +87,7 @@ def getEncodedUsers():
         idx = np.sum(temp[nanCols].values, axis=1) > 0
         temp.loc[idx, nanCols] = 0
 
-    encodedUsersOneHot = {x: temp[temp.gender != x].drop(columns=['gender']).copy(deep=True) for x in ['Male', 'Female']}
+    encodedUsersOneHot = {x: temp[temp.gender != x].drop(columns=['gender']).astype(pd.SparseDtype("int32", 0)).copy(deep=True) for x in ['Male', 'Female']}
 
     del temp
     gc.collect()
@@ -261,7 +261,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
         {'member_id': oneHotTieredUsers.member_id, 'score': scores})
 
     predictions = pd.merge(
-        scoredUsers[['member_id', 'score']],
+        scoredUsers[['member_id', 'score']].sparse.to_dense(),
         reducedUsers, on='member_id'
     )
 
