@@ -18,3 +18,5 @@ userUpdation.csv.lock
 config/__pycache__/
 scripts/cronJobRefresh.log
 my_logfile.log
+userExport.feather.test
+userExport.feather.test.lock

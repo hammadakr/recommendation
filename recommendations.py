@@ -236,7 +236,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
 
     values = []
     cols = []
-    for category in dummyCols:
+    for category in [x for x in dummyCols if x != 'permanent_city']:
         idx = [x for x in preferences.index if x.startswith(category)]
         weight = 5**(preferences[idx].max())
         for tier in idx:
@@ -356,14 +356,18 @@ def setUserStatus(status):
     except Exception as exc:
         return "Invalid input!", 400
     
-    global reducedUsers, encodedUsersOneHot
-    if (reducedUsers.member_id == member_id).sum() == 0:
-        return "member_id not in data!", 400
-    idx = (reducedUsers.member_id == member_id)
-    reducedUsers.loc[idx, 'status'] = status
-    reducedUsers.loc[idx, 'lastonline'] = int(datetime.datetime.now().timestamp())
+        #Not updating in-flight right now since it eats up memory, the updates will take place after the refresh data script
+    # global reducedUsers, encodedUsersOneHot
+    # if (reducedUsers.member_id == member_id).sum() == 0:
+    #     return "member_id not in data!", 400
+    # idx = (reducedUsers.member_id == member_id)
+    # reducedUsers.loc[idx, 'status'] = status
+    # reducedUsers.loc[idx, 'lastonline'] = int(datetime.datetime.now().timestamp())
 
-    encodedUsersOneHot = getEncodedUsers()
+    # encodedUsersOneHot = {}
+    # gc.collect()
+    # encodedUsersOneHot = getEncodedUsers()
+
     addUpdation(reducedUsers[reducedUsers.member_id == member_id])
     return {}, 200
 
