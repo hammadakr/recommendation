@@ -173,7 +173,7 @@ def prepareUserFormData(member_id, userData):
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
     df_dict = dict(zip(['member_id'] + list(userFormData.keys()), values))
-    df['gender'].replace({'1' : 'Female', '2' : 'Male'})
+    
     if df_dict['gender'] == '1':
         df_dict['gender'] = 'Female'
     elif df_dict['gender'] == '2':
