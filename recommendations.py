@@ -242,7 +242,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
         for tier in idx:
             values.append(weight * preferences[tier])
             cols.append(tier)
-
+ 
     vector = pd.Series(data=values, index=cols)
     ageLowerBound = match_df.age.quantile(
         q=0.5) if senderIsFemme else match_df.age.quantile(0.3)
@@ -311,14 +311,14 @@ def recommendation():
     gc.collect()
     errors = []
     timer.check('Fetching data')
-
+    
     member_id = None
     try:
         member_id = int(request.form['member_id'])
     except ValueError as verr:
-        return "Exception Encountered: supplied 'member_id' is not an integer!", 400
+        return "Recommendation: Exception Encountered: supplied 'member_id' is not an integer!", 400
     except Exception as exc:
-        return "Invalid input!", 400
+        return "Recommendation: Invalid input!", 400
 
     formUserData = json.loads(request.form['userData'])
     userData = None
@@ -326,7 +326,7 @@ def recommendation():
         userData = prepareUserFormData(member_id=member_id, userData=formUserData)
     except Exception as e:
         logger.error(e)
-        return f'Error: {e}', 400
+        return f'Recommendation: Error: {e}', 400
     controlParams = dict(
         offset = 0,
         count = 50,
@@ -339,7 +339,7 @@ def recommendation():
         try:
             controlParams[key] = type(val)(request.form[key])
         except:
-            errors.append(f'Error: invalid {key} using default values {val}')
+            errors.append(f'Recommendation: Error: invalid {key} using default values {val}')
     if (userData.status == 1).sum():
         #only add if user is approved
         addUpdation(userData)
@@ -352,9 +352,9 @@ def setUserStatus(status):
     try:
         member_id = int(request.form['member_id'])
     except ValueError as verr:
-        return "Exception Encountered: supplied 'member_id' is not an integer!", 400
+        return "Recommendation: Exception Encountered: supplied 'member_id' is not an integer!", 400
     except Exception as exc:
-        return "Invalid input!", 400
+        return "Recommendation: Invalid input!", 400
     
         #Not updating in-flight right now since it eats up memory, the updates will take place after the refresh data script
     # global reducedUsers, encodedUsersOneHot
