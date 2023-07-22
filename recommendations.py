@@ -180,13 +180,6 @@ def prepareUserFormData(member_id, userData):
         genderVal = df_dict["gender"]
         raise Exception(f'invalid gender! : {genderVal}')
 
-    df = pd.DataFrame([df_dict])
-    # if(df_dict['gallery'] not in ['Yes', 'No'])
-
-    df['gallery'] = (df.gallery == 'yes').astype(int)
-    df['status'] = (df.status == 'approved').astype(int)
-    df['lastonline'] = int(datetime.datetime.now().timestamp())
-  
     int8s = ['gallery', 'status']
     int32s = ['age']
     int64s = ['lastonline']
@@ -194,7 +187,14 @@ def prepareUserFormData(member_id, userData):
     
     MAX_STRING_LENGTH_IN_DATA = 22
     for col in strings:
-        df.loc[:, col] = df[col].apply(lambda x: x[:MAX_STRING_LENGTH_IN_DATA])
+        df_dict[col] = df_dict[col][:MAX_STRING_LENGTH_IN_DATA] if (df_dict[col] is not None) or (df_dict[col] != '') else np.nan
+
+    df = pd.DataFrame([df_dict])
+    # if(df_dict['gallery'] not in ['Yes', 'No'])
+
+    df['gallery'] = (df.gallery == 'yes').astype(int)
+    df['status'] = (df.status == 'approved').astype(int)
+    df['lastonline'] = int(datetime.datetime.now().timestamp())
 
     for cols, cols_type in zip([strings, int8s, int32s, int64s], [np.str_, np.int8, np.int32, np.int64]):
         for col in cols:
@@ -340,7 +340,7 @@ def recommendation():
         logger.error(e)
         return f'Recommendation: Error: {e}\n{json.dumps(formUserData)}', 400
 
-    return f'userdata: {userData}'
+    return f'userdata: {userData.to_dict(orient="records")[0]}\nreceiveddata: {formUserData}'
     controlParams = dict(
         offset = 0,
         count = 50,
