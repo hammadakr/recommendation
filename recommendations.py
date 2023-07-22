@@ -329,7 +329,7 @@ def recommendation():
         userData = prepareUserFormData(member_id=member_id, userData=formUserData)
     except Exception as e:
         logger.error(e)
-        return f'Recommendation: Error: {e}', 400
+        return f'Recommendation: Error: {e}\n{json.dumps(formUserData)}', 400
     controlParams = dict(
         offset = 0,
         count = 50,
