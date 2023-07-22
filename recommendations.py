@@ -149,20 +149,20 @@ def prepareUserFormData(member_id, userData):
         'age', 'gender', 'membership', 'gallery', 'status',
         'marital_status', 'permanent_country', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect'
     ]
-    userFormData = dict(zip(userFormData, [ [x] for x in userFormData ]))
-    userFormData['status'].append('trust_batch')
-    userFormData['highest_education'].append('education')
-    userFormData['sect'].append('sub_caste')
+    userFormData = dict(zip(userFormData, userFormData))
+    userFormData['status'] = 'approve_status'
+    userFormData['gallery'] = 'gallery_display'
+    userFormData['highest_education'] = 'education'
+    userFormData['sect'] = 'sub_caste'
 
     missing_columns = []
     values = [member_id]
-    for col, keys in userFormData.items():
+    for col, key in userFormData.items():
         try:
-            for key in keys:
-                if key in userData:
-                    val = userData[key]
-                    values.append(val if (val is not None) or (val != '') else np.nan)
-                    break
+            if key in userData:
+                val = userData[key]
+                values.append(val if (val is not None) or (val != '') else np.nan)
+                break
             else:
                 raise Exception('missing column')                
         except:
@@ -173,12 +173,20 @@ def prepareUserFormData(member_id, userData):
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
     df_dict = dict(zip(['member_id'] + list(userFormData.keys()), values))
+    df['gender'].replace({'1' : 'Female', '2' : 'Male'})
+    if df_dict['gender'] == '1':
+        df_dict['gender'] = 'Female'
+    elif df_dict['gender'] == '2':
+        df_dict['gender'] = 'Male'
+    else:
+        genderVal = df_dict["gender"]
+        raise Exception(f'invalid gender! : {genderVal}')
+
     df = pd.DataFrame([df_dict])
-  
     # if(df_dict['gallery'] not in ['Yes', 'No'])
 
-    df['gallery'] = (df.gallery == 'Yes').astype(int)
-    df['status'] = (df.status == 'Approved').astype(int)
+    df['gallery'] = (df.gallery == 'yes').astype(int)
+    df['status'] = (df.status == 'approved').astype(int)
     df['lastonline'] = int(datetime.datetime.now().timestamp())
   
     int8s = ['gallery', 'status']
@@ -328,7 +336,6 @@ def recommendation():
 
     formUserData = json.loads(request.form['userData'])
     userData = None
-    return f'Recommendation testing: \n{json.dumps(formUserData)}', 400
  
     try:
         userData = prepareUserFormData(member_id=member_id, userData=formUserData)
