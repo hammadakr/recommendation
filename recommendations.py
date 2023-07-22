@@ -172,8 +172,11 @@ def prepareUserFormData(member_id, userData):
     if missing_columns:
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
-    df = pd.DataFrame([dict(zip(['member_id'] + list(userFormData.keys()), values))])
+    df_dict = dict(zip(['member_id'] + list(userFormData.keys()), values))
+    df = pd.DataFrame([df_dict])
   
+    # if(df_dict['gallery'] not in ['Yes', 'No'])
+
     df['gallery'] = (df.gallery == 'Yes').astype(int)
     df['status'] = (df.status == 'Approved').astype(int)
     df['lastonline'] = int(datetime.datetime.now().timestamp())
@@ -325,6 +328,8 @@ def recommendation():
 
     formUserData = json.loads(request.form['userData'])
     userData = None
+    return f'Recommendation testing: \n{json.dumps(formUserData)}', 400
+ 
     try:
         userData = prepareUserFormData(member_id=member_id, userData=formUserData)
     except Exception as e:
