@@ -234,6 +234,14 @@ def getUserInfo(member_id):
     except Exception as exc:
         return "Invalid input!"
 
+
+def split_dataframe(df, chunk_size): 
+    chunks = list()
+    num_chunks = math.ceil(len(df) / chunk_size)
+    for i in range(num_chunks):
+        chunks.append(df[i*chunk_size:(i+1)*chunk_size])
+    return chunks
+
 def createRecommendationResults(member_id, userData, offset, count, withInfo, timeMix, premiumMix, galleryMix, errors = []):
     timer = Timer()
     timer.start()
@@ -265,7 +273,11 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     
     timer.check('Gathering Preferences')
 
-    scores = oneHotTieredUsers[vector.index].dot(vector)
+    scores = pd.Series()
+    for u_df in split_dataframe(oneHotTieredUsers, 1_00_000):
+        scores = pd.concat([scores, oneHotTieredUsers[vector.index].dot(vector)])
+    scores.reset_index(inplace=True, drop=True)
+    # scores = oneHotTieredUsers[vector.index].dot(vector)
     scores += oneHotTieredUsers.age.between(
         ageLowerBound, ageUpperBound).astype(float) * 2
     
