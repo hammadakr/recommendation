@@ -142,6 +142,9 @@ def getPopularCities():
 popular_cities = getPopularCities()
 
 def prepareUserFormData(member_id, userData):
+    if userData is None:
+        raise Exception('userData is None')
+
     userFormData = [
         'age', 'gender', 'membership', 'gallery', 'status',
         'marital_status', 'permanent_country', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect'
