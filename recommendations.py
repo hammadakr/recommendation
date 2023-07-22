@@ -154,6 +154,8 @@ def prepareUserFormData(member_id, userData):
     userFormData['gallery'] = 'gallery_display'
     userFormData['highest_education'] = 'education'
     userFormData['sect'] = 'sub_caste'
+    userFormData['occupation'] = 'designation'
+    userFormData['employed'] = 'occupation'
 
     missing_columns = []
     values = [member_id]
@@ -187,7 +189,7 @@ def prepareUserFormData(member_id, userData):
     
     MAX_STRING_LENGTH_IN_DATA = 22
     for col in strings:
-        df_dict[col] = df_dict[col][:MAX_STRING_LENGTH_IN_DATA] if (df_dict[col] is not None) or (df_dict[col] != '') else np.nan
+        df_dict[col] = df_dict[col][:MAX_STRING_LENGTH_IN_DATA] if (df_dict[col] is not None) and (df_dict[col] != '') else np.nan
 
     df = pd.DataFrame([df_dict])
     # if(df_dict['gallery'] not in ['Yes', 'No'])
@@ -340,7 +342,7 @@ def recommendation():
         logger.error(e)
         return f'Recommendation: Error: {e}\n{json.dumps(formUserData)}', 400
 
-    return f'userdata: {userData.to_dict(orient="records")[0]}\nreceiveddata: {formUserData}'
+    # return f'userdata: {userData.to_dict(orient="records")[0]}\nreceiveddata: {formUserData}'
     controlParams = dict(
         offset = 0,
         count = 50,
