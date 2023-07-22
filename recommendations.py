@@ -288,19 +288,19 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     percentageRecommendationsPremium = round(100 * premiumMemberships.sum() / predictions.shape[0])
     percentageRecommendationsGallery = round(100 * yesGallery.sum() / predictions.shape[0])
     
+    predictions.loc[:, 'score'] = (predictions['score']/predictions['score'].max()).astype(float).round(2).fillna(0)
     predictions.sort_values(by='score', inplace=True, ascending=False)
     timer.check('Calculating final metrics')
     # timer.log()
     timer.end() 
     return {
-        'cicd' : 'check',
-        'error': errors,
-        'user': senderInfo,
+        # 'error': errors,
+        # 'user': senderInfo,
         'userInterestCount': match_df.shape[0],
         'percentageResultsPremium' : percentageRecommendationsPremium,
         'percentageResultsHaveGallery' : percentageRecommendationsGallery,
         'userRecommendations': predictions[predictions.columns if withInfo else ['member_id', 'score']].to_dict(orient='records'),
-        'timeframeCounts' : predictions.monthYear.value_counts().to_dict()
+        # 'timeframeCounts' : predictions.monthYear.value_counts().to_dict()
     }
 
 @app.route("/recommendation", methods=['POST'])
@@ -332,8 +332,8 @@ def recommendation():
         count = 50,
         withInfo = False,
         timeMix = 0.25,
-        premiumMix = 0.05,
-        galleryMix = 0.01
+        premiumMix = 0,
+        galleryMix = 0
     )
     for key, val in controlParams.items():
         try:
