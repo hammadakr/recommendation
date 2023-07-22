@@ -162,12 +162,10 @@ def prepareUserFormData(member_id, userData):
             if key in userData:
                 val = userData[key]
                 values.append(val if (val is not None) or (val != '') else np.nan)
-                break
             else:
                 raise Exception('missing column')                
         except:
             missing_columns.append(col)
-
 
     if missing_columns:
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
