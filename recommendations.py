@@ -320,7 +320,6 @@ def recommendation():
     global logger
     timer = Timer()		
     timer.start()
-    gc.collect()
     errors = []
     timer.check('Fetching data')
     
@@ -340,6 +339,8 @@ def recommendation():
     except Exception as e:
         logger.error(e)
         return f'Recommendation: Error: {e}\n{json.dumps(formUserData)}', 400
+
+    return f'userdata: {userData}'
     controlParams = dict(
         offset = 0,
         count = 50,
@@ -357,6 +358,7 @@ def recommendation():
         #only add if user is approved
         addUpdation(userData)
 
+    gc.collect()
     return createRecommendationResults(member_id=member_id, userData=userData, errors=errors, **controlParams)
  
 
