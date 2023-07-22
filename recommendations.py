@@ -275,7 +275,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
 
     scores = pd.Series()
     for u_df in split_dataframe(oneHotTieredUsers, 1_00_000):
-        scores = pd.concat([scores, oneHotTieredUsers[vector.index].dot(vector)])
+        scores = pd.concat([scores, u_df[vector.index].dot(vector)])
     scores.reset_index(inplace=True, drop=True)
     # scores = oneHotTieredUsers[vector.index].dot(vector)
     scores += oneHotTieredUsers.age.between(
