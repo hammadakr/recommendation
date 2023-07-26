@@ -1,16 +1,16 @@
 import math
 import datetime
 import calendar
+import time
+from functools import wraps
+import json
+import gc
+
 import pandas as pd
 import numpy as np
-import time
 
-from flask import Flask, render_template, request, Blueprint
+from flask import Flask, render_template, request, Blueprint, Response
 from flask_cors import CORS
-
-import json
-
-import gc
 
 app = Flask(__name__)
 CORS(app)
@@ -50,8 +50,18 @@ def setup_logger(log_file, log_level=logging.DEBUG):
 
     return logger
 
-# Usage example
 logger = setup_logger("my_logfile.log", logging.DEBUG)
+
+def topLevelCatcher(action_func):
+    @wraps(action_func)
+    def wrapper(*args, **kwargs):
+        global logger
+        try:
+            return action_func(*args, **kwargs)
+        except Exception as e:
+            logger.error(e)
+            return f'Internal Error: {e}', 400
+    return wrapper
 
 UPDATION_URI = 'userUpdation.csv'
 USERS_URI = 'userExport.feather'
@@ -193,7 +203,6 @@ def prepareUserFormData(member_id, userData):
         df_dict[col] = df_dict[col][:MAX_STRING_LENGTH_IN_DATA] if (df_dict[col] is not None) and (df_dict[col] != '') else np.nan
 
     df = pd.DataFrame([df_dict])
-    # if(df_dict['gallery'] not in ['Yes', 'No'])
 
     df['gallery'] = (df.gallery == 'yes').astype(int)
     df['status'] = (df.status == 'approved').astype(int)
@@ -220,6 +229,7 @@ def prepareUserFormData(member_id, userData):
     return df.drop(columns=['permanent_country'])
 
 @app.route("/get-user-info/<member_id>", methods=['GET'])
+@topLevelCatcher
 def getUserInfo(member_id):
     global reducedUsers
     unnecessaryCols = ['monthYear', 'lastonline', 'lastActiveDate']
@@ -275,20 +285,10 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     timer.check('Gathering Preferences')
     scores = pd.Series()
 
-    global logger
-    logger.info('starting scores')
-
     for u_df in split_dataframe(oneHotTieredUsers[vector.index.to_list()], 1_000):
-        # logger.info(f'shapes: {oneHotTieredUsers.shape}, {u_df.shape}')
-        # logger.info(f'{list(set(vector.index.to_list()) ^ set(u_df.columns.to_list()))}')
-        # logger.info(f'{u_df.shape}, {vector.shape}')
         scores = pd.concat([scores, u_df.dot(vector)])
-    
-    # scores = oneHotTieredUsers[vector.index].dot(vector)
-
     scores.reset_index(inplace=True, drop=True)
-    # scores = oneHotTieredUsers[vector.index].dot(vector)
-    logger.info('ending scores')
+
     scores += oneHotTieredUsers.age.between(
         ageLowerBound, ageUpperBound).astype(float) * 2
     
@@ -332,28 +332,52 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     timer.end() 
     return {
         # 'error': errors,
-        # 'user': senderInfo,
+        # 'user': senderInfo,4
+        # 'timeframeCounts' : predictions.monthYear.value_counts().to_dict(),
         'userInterestCount': match_df.shape[0],
         'percentageResultsPremium' : percentageRecommendationsPremium,
         'percentageResultsHaveGallery' : percentageRecommendationsGallery,
-        'userRecommendations': predictions[predictions.columns if withInfo else ['member_id', 'score']].to_dict(orient='records'),
-        # 'timeframeCounts' : predictions.monthYear.value_counts().to_dict()
+        'userRecommendations': predictions[predictions.columns if withInfo else ['member_id', 'score']].to_dict(orient='records')
     }
 
-def noorsCatchingMechanism(action : callable):
-    def decorator():
-          try:
-               return action()
-          except Exception as e:
-               print(e)
-               return f'Error: {e}\nRequest: {request.form}', 500
-    return decorator
+@app.route("/update-user", methods=['POST'])
+@topLevelCatcher
+def updateUser():
+    global logger
+    timer = Timer()
+    timer.start()
+    errors = []
+    timer.check('Fetching data')
+    
+    member_id = None
+    try:
+        member_id = int(request.form['member_id'])
+    except ValueError as verr:
+        return "Recommendation: Exception Encountered: supplied 'member_id' is not an integer!", 400
+    except Exception as exc:
+        return "Recommendation: Invalid input!", 400
+
+    formUserData = json.loads(request.form['userData'])
+    userData = None
+ 
+    try:
+        userData = prepareUserFormData(member_id=member_id, userData=formUserData)
+    except Exception as e:
+        logger.error(e)
+        return f'Recommendation: Error: {e}\n{json.dumps(formUserData)}', 400
+
+    if (userData.status == 1).sum():
+        #only add if user is approved
+        addUpdation(userData)
+
+    gc.collect()
+    return Response(status=204)
 
 @app.route("/recommendation", methods=['POST'])
-@noorsCatchingMechanism
+@topLevelCatcher
 def recommendation():
     global logger
-    timer = Timer()		
+    timer = Timer()
     timer.start()
     errors = []
     timer.check('Fetching data')
@@ -405,47 +429,21 @@ def setUserStatus(status):
         return "Recommendation: Exception Encountered: supplied 'member_id' is not an integer!", 400
     except Exception as exc:
         return "Recommendation: Invalid input!", 400
-    
-        #Not updating in-flight right now since it eats up memory, the updates will take place after the refresh data script
-    # global reducedUsers, encodedUsersOneHot
-    # if (reducedUsers.member_id == member_id).sum() == 0:
-    #     return "member_id not in data!", 400
-    # idx = (reducedUsers.member_id == member_id)
-    # reducedUsers.loc[idx, 'status'] = status
-    # reducedUsers.loc[idx, 'lastonline'] = int(datetime.datetime.now().timestamp())
-
-    # encodedUsersOneHot = {}
-    # gc.collect()
-    # encodedUsersOneHot = getEncodedUsers()
 
     addUpdation(reducedUsers[reducedUsers.member_id == member_id])
-    return {}, 200
+    return Response(status=204)
 
 @app.route('/deactivate', methods=['POST'])
+@topLevelCatcher
 def deactivate():
     return setUserStatus(status=0);
  
 @app.route('/activate', methods=['POST'])
+@topLevelCatcher
 def activate():
     return setUserStatus(status=1);
 
 @app.route('/', methods=['GET'])
+@topLevelCatcher
 def home():
-    return """
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Hello, world!</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="" />
-  <link rel="icon" href="favicon.png">
-</head>
-<body>
-  <h1>nf-recommendation api!</h1>
-  <h2>endpoints:</h2>
-  <h3>/test_recommendation [POST]</h3>
-  <h3>/past-interests/"member_id" [GET]</h3>
-</body>
-</html>
-    """
+    return """<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><title>nf!</title><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="description" content="" /></head><body><h1>nf-recommendation api!</h1></body></html>"""
