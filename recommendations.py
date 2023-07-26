@@ -87,6 +87,7 @@ def getEncodedUsers():
         idx = np.sum(temp[nanCols].values, axis=1) > 0
         temp.loc[idx, nanCols] = 0
 
+    temp = temp.loc[:, ~temp.columns.duplicated()].copy()
     encodedUsersOneHot = {x: temp[temp.gender != x].drop(columns=['gender']).astype(pd.SparseDtype("int32", 0)).copy(deep=True) for x in ['Male', 'Female']}
 
     del temp
@@ -236,11 +237,9 @@ def getUserInfo(member_id):
 
 
 def split_dataframe(df, chunk_size): 
-    chunks = list()
     num_chunks = math.ceil(len(df) / chunk_size)
     for i in range(num_chunks):
-        chunks.append(df[i*chunk_size:(i+1)*chunk_size])
-    return chunks
+        yield df[i*chunk_size:(i+1)*chunk_size]
 
 def createRecommendationResults(member_id, userData, offset, count, withInfo, timeMix, premiumMix, galleryMix, errors = []):
     timer = Timer()
@@ -266,18 +265,30 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
             cols.append(tier)
  
     vector = pd.Series(data=values, index=cols)
+    vector = vector[~vector.index.duplicated()]
+
     ageLowerBound = match_df.age.quantile(
         q=0.5) if senderIsFemme else match_df.age.quantile(0.3)
     ageUpperBound = match_df.age.quantile(
         q=0.8) if senderIsFemme else match_df.age.quantile(0.7)
     
     timer.check('Gathering Preferences')
-
     scores = pd.Series()
-    for u_df in split_dataframe(oneHotTieredUsers, 1_00_000):
-        scores = pd.concat([scores, u_df[vector.index].dot(vector)])
+
+    global logger
+    logger.info('starting scores')
+
+    for u_df in split_dataframe(oneHotTieredUsers[vector.index.to_list()], 1_000):
+        # logger.info(f'shapes: {oneHotTieredUsers.shape}, {u_df.shape}')
+        # logger.info(f'{list(set(vector.index.to_list()) ^ set(u_df.columns.to_list()))}')
+        # logger.info(f'{u_df.shape}, {vector.shape}')
+        scores = pd.concat([scores, u_df.dot(vector)])
+    
+    # scores = oneHotTieredUsers[vector.index].dot(vector)
+
     scores.reset_index(inplace=True, drop=True)
     # scores = oneHotTieredUsers[vector.index].dot(vector)
+    logger.info('ending scores')
     scores += oneHotTieredUsers.age.between(
         ageLowerBound, ageUpperBound).astype(float) * 2
     
@@ -329,7 +340,17 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
         # 'timeframeCounts' : predictions.monthYear.value_counts().to_dict()
     }
 
+def noorsCatchingMechanism(action : callable):
+    def decorator():
+          try:
+               return action()
+          except Exception as e:
+               print(e)
+               return f'Error: {e}\nRequest: {request.form}', 500
+    return decorator
+
 @app.route("/recommendation", methods=['POST'])
+@noorsCatchingMechanism
 def recommendation():
     global logger
     timer = Timer()		
