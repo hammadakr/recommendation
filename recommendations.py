@@ -9,7 +9,7 @@ import gc
 import pandas as pd
 import numpy as np
 
-from flask import Flask, render_template, request, Blueprint, Response
+from flask import Flask, render_template, request, Blueprint, Response, send_file, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -442,6 +442,14 @@ def deactivate():
 @topLevelCatcher
 def activate():
     return setUserStatus(status=1);
+
+@app.route('/test', methods=['GET'])
+def testingWebsite():
+    return send_file('testingWebsite/index.html')
+
+@app.route('/assets/<path:path>')
+def send_asset(path):
+    return send_from_directory('testingWebsite/assets', path)
 
 @app.route('/', methods=['GET'])
 @topLevelCatcher
