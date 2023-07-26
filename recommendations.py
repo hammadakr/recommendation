@@ -185,6 +185,7 @@ def prepareUserFormData(member_id, userData):
 
     df_dict = dict(zip(['member_id'] + list(userFormData.keys()), values))
     
+    #gender may be reversed
     if df_dict['gender'] == '1':
         df_dict['gender'] = 'Female'
     elif df_dict['gender'] == '2':
@@ -247,7 +248,7 @@ def getUserInfo(member_id):
 
 
 def split_dataframe(df, chunk_size): 
-    num_chunks = math.ceil(len(df) / chunk_size)
+    num_chunks = math.ceil(df.shape[0] / chunk_size)
     for i in range(num_chunks):
         yield df[i*chunk_size:(i+1)*chunk_size]
 
@@ -273,25 +274,30 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
         for tier in idx:
             values.append(weight * preferences[tier])
             cols.append(tier)
- 
-    vector = pd.Series(data=values, index=cols)
-    vector = vector[~vector.index.duplicated()]
 
+    vector = pd.Series(data=values, index=cols)
     ageLowerBound = match_df.age.quantile(
         q=0.5) if senderIsFemme else match_df.age.quantile(0.3)
     ageUpperBound = match_df.age.quantile(
         q=0.8) if senderIsFemme else match_df.age.quantile(0.7)
     
     timer.check('Gathering Preferences')
-    scores = pd.Series()
 
-    for u_df in split_dataframe(oneHotTieredUsers[vector.index.to_list()], 1_000):
-        scores = pd.concat([scores, u_df.dot(vector)])
-    scores.reset_index(inplace=True, drop=True)
+    # scores = pd.concat([(u_df @ vector) for u_df in split_dataframe(oneHotTieredUsers[vector.index], 10000)]).reset_index(drop=True)
+    chunk_size = 1000
+    total_rows = oneHotTieredUsers.shape[0]
+    results = []
+    for i in range(0, total_rows, chunk_size):
+        chunk = oneHotTieredUsers.iloc[i:i+chunk_size]        
+        dot_product_chunk = chunk[vector.index].dot(vector)
+        results.append(dot_product_chunk)
+    # Concatenate the results into a single DataFrame
+    scores = pd.concat(results)
 
     scores += oneHotTieredUsers.age.between(
         ageLowerBound, ageUpperBound).astype(float) * 2
-    
+
+
     timer.check('Calculating base score')
 
     scoredUsers = pd.DataFrame(
