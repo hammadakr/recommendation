@@ -100,9 +100,9 @@
   $: getRecommendations(member_id, userInfo).then(value => {
     hasEntered = false
     recommended = value
-  }) 
+  })
 
-  const prepareInfoString = (userInfo) => `${userInfo.marital_status} ${userInfo.caste} employed in ${userInfo.employed} working as ${userInfo.occupation} and from ${userInfo.permanent_city}, ${userInfo.permanent_state} last online: ${(new Date(userInfo.lastonline * 1000)).toDateString()}`
+  const prepareInfoString = (userInfo) => `${userInfo.marital_status} ${userInfo.gender} ${userInfo.caste} employed in ${userInfo.employed} working as ${userInfo.occupation} and from ${userInfo.permanent_city}, ${userInfo.permanent_state} last online: ${(new Date(userInfo.lastonline * 1000)).toDateString()}`
 
 </script>
 
