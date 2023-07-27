@@ -449,13 +449,15 @@ def deactivate():
 def activate():
     return setUserStatus(status=1);
 
+TESTING_WEBSITE_PATH = 'nf-recs-svelte/dist/'
+
 @app.route('/test', methods=['GET'])
 def testingWebsite():
-    return send_file('testingWebsite/index.html')
+    return send_file(f'{TESTING_WEBSITE_PATH}index.html')
 
 @app.route('/assets/<path:path>')
 def send_asset(path):
-    return send_from_directory('testingWebsite/assets', path)
+    return send_from_directory(f'{TESTING_WEBSITE_PATH}/assets', path)
 
 @app.route('/', methods=['GET'])
 @topLevelCatcher
