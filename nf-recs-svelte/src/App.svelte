@@ -50,7 +50,7 @@
 			return []
 		}
     userInfo['gallery'] = userInfo['gallery'].toLowerCase()
-    userInfo['gender'] = userInfo['gender'] == 'Male' ? '2' : '1' 
+    userInfo['gender'] = userInfo['gender'] == 'Male' ? '1' : '2' 
 
     const helperRenamer = (old_key, new_key) => {
       if (old_key !== new_key) {

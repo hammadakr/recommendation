@@ -185,11 +185,11 @@ def prepareUserFormData(member_id, userData):
 
     df_dict = dict(zip(['member_id'] + list(userFormData.keys()), values))
     
-    #gender may be reversed
+    #switched 
     if df_dict['gender'] == '1':
-        df_dict['gender'] = 'Female'
-    elif df_dict['gender'] == '2':
         df_dict['gender'] = 'Male'
+    elif df_dict['gender'] == '2':
+        df_dict['gender'] = 'Female'
     else:
         genderVal = df_dict["gender"]
         raise Exception(f'invalid gender! : {genderVal}')
