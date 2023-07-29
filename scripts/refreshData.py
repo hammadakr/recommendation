@@ -98,7 +98,11 @@ def updateInterest():
             raise Exception('last timestamp is null')
 
         result = requests.post(INTEREST_API, data = {'timestamp' : lastTimestamp}).json()
-        result_df = pd.DataFrame(result)
+        result_df = pd.DataFrame(result).rename(
+            columns={'sender' : 'sender_id', 'receiver' : 'receiver_id', 'time' : 'timestamp', 'status' : 'isAccepted'}
+            )
+        result_df.isAccepted = (result_df.isAccepted != 'Pending').astype(int)
+
         result_df.sender_id = result_df.sender_id.astype(int)
         result_df.receiver_id = result_df.receiver_id.astype(int)
         result_df.timestamp = result_df.timestamp.astype(int)
