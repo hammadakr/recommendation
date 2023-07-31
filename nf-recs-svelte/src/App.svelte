@@ -4,10 +4,12 @@
 	let member_id = null
   let hasEntered = false
   const handleButton = (event) => {
-    member_id = member_id_button
-    userInfo = null
-    recommended = null
-    hasEntered = true
+    if(member_id_button != null){
+      member_id = member_id_button
+      userInfo = null
+      recommended = null
+      hasEntered = true
+    }
   }
 	const getUserInfo = async (member_id) => {
 		if(!member_id){
@@ -27,36 +29,38 @@
   let userInfo = null
 	$: getUserInfo(member_id).then(value => {userInfo = value}) 
 
-  // const getPastInterests = async (member_id) => {
-	// 	if(!member_id){
-	// 		return null
-	// 	}
-	// 	var requestOptions = {
-	// 	  method: 'GET',
-	// 	  redirect: 'follow'
-	// 	};
-	// 	let response = await fetch(`http://128.199.22.142/past-interests/${member_id}`, requestOptions)
-	// 	let final = await response.json()
-  //   final['permanent_country'] = 'India'
-  //   final.gallery = final.gallery == 1 ? 'Yes' : 'No'
-  //   final.status = final.status == 1 ? 'Approved' : 'No'
-  //   return final
-  // }
-  // let pastInterests = []
-	// $: getPastInterests(member_id).then(value => {pastInterests = value}) 
+  const getPastInterests = async (member_id) => {
+		if(!member_id){
+			return null
+		}
+		var requestOptions = {
+		  method: 'GET',
+		  redirect: 'follow'
+		};
+		let response = await fetch(`http://128.199.22.142/past-interests/${member_id}`, requestOptions)
+		let final = await response.json()
+    final['permanent_country'] = 'India'
+    final.gallery = final.gallery == 1 ? 'Yes' : 'No'
+    final.status = final.status == 1 ? 'Approved' : 'No'
+    console.log('final', final)
+    return final
+  }
+  let pastInterests = []
+	$: getPastInterests(member_id).then(value => {pastInterests = value}) 
 	
-  const getRecommendations = async (member_id, userInfo) => {
-		if(!member_id || !userInfo){
+  const getRecommendations = async (member_id, userInfoInput) => {
+    userInfoInput = JSON.parse(JSON.stringify(userInfoInput))
+		if(!member_id || !userInfoInput){
 			return []
 		}
-    userInfo['gallery'] = userInfo['gallery'].toLowerCase()
-    userInfo['gender'] = userInfo['gender'] == 'Male' ? '1' : '2' 
+    userInfoInput['gallery'] = userInfoInput['gallery'].toLowerCase()
+    userInfoInput['gender'] = userInfoInput['gender'] == 'Male' ? '1' : '2' 
 
     const helperRenamer = (old_key, new_key) => {
       if (old_key !== new_key) {
-    Object.defineProperty(userInfo, new_key,
-        Object.getOwnPropertyDescriptor(userInfo, old_key));
-    delete userInfo[old_key];
+    Object.defineProperty(userInfoInput, new_key,
+        Object.getOwnPropertyDescriptor(userInfoInput, old_key));
+    delete userInfoInput[old_key];
       }
     }
 
@@ -74,14 +78,14 @@
     // userInfo['occupation'] = 'designation'
     // userInfo['employed'] = 'occupation'
 
-    console.log('sending: ', userInfo)
+    console.log('sending: ', userInfoInput)
 
     var formdata = new FormData();
     formdata.append("member_id", member_id);
     formdata.append("withInfo", "y");
     formdata.append("offset", "0");
     formdata.append("count", "300");
-    formdata.append("userData", JSON.stringify(userInfo));
+    formdata.append("userData", JSON.stringify(userInfoInput));
     formdata.append("timeMix", "0.25");
 
     var requestOptions = {
@@ -89,7 +93,7 @@
       body: formdata,
       redirect: 'follow'
     };
-    console.log(JSON.stringify(userInfo))
+    console.log(JSON.stringify(userInfoInput))
     let response = await fetch("http://128.199.22.142/recommendation", requestOptions)
     console.log('u')
     let final = await response.json()
@@ -102,27 +106,50 @@
     recommended = value
   })
 
-  const prepareInfoString = (userInfo) => `${userInfo.marital_status} ${userInfo.gender} ${userInfo.caste} employed in ${userInfo.employed} working as ${userInfo.occupation} and from ${userInfo.permanent_city}, ${userInfo.permanent_state} last online: ${(new Date(userInfo.lastonline * 1000)).toDateString()}`
+  let selectedResults = 'recommendations'
+
+  const prepareInfoString = (userInfo) => `${userInfo.age} years old, ${userInfo.marital_status} ${userInfo.gender} ${userInfo.caste} employed in ${userInfo.employed} working as ${userInfo.occupation} and from ${userInfo.permanent_city}, ${userInfo.permanent_state} last online: ${(new Date(userInfo.lastonline * 1000)).toDateString()}`
 
 </script>
 
 <div>
-  <input type="text" bind:value={member_id_button} on:keypress={(event) => {
-    if (event.key === 'Enter')
-      handleButton(event)
-  }}/>
-  <button on:click={handleButton}>Submit</button>
-{#if (hasEntered && (recommended == null))}
-  <h1>LOADING</h1>
-{:else}
-<br>
-<!-- <select name="flip-1" id="flip-1" data-role="slider">
-  <option value="past">Past Interests</option>
-  <option value="recommendations">Recommendations</option>
-</select>  -->
-<h1>Hello {member_id}! You are {userInfo ? prepareInfoString(userInfo) : 'nobody and from nowhere'}</h1>
-{#each (recommended ? recommended : []) as rec}
-  <h2>{rec.member_id} who is {prepareInfoString(rec)}</h2>
-{/each}
+  <div>
+    <input type="text" placeholder="member_id" bind:value={member_id_button} on:keypress={(event) => {
+      if (event.key === 'Enter')
+        handleButton(event)
+    }}/>
+    <button on:click={handleButton}>Submit</button>
+    <br>
+    <select bind:value={selectedResults}>
+      <option value="past">Past Interests</option>
+      <option value="recommendations" selected>Recommendations</option>
+    </select> 
+  </div>
+  {#if (hasEntered && (recommended == null))}
+    <h1>LOADING</h1>
+  {:else}
+  <h1>Hello {member_id}! You are {userInfo ? prepareInfoString(userInfo) : 'nobody and from nowhere'}</h1>
+  {#if selectedResults == 'recommendations'}
+    <h1> RECOMMENDATIONS </h1>
+    {#each (recommended ? recommended : []) as rec}
+    <h2>{rec.member_id} who is {prepareInfoString(rec)}</h2>
+    {/each}
+  {:else}
+    <h1> PAST INTERESTS </h1>
+    {#if pastInterests && pastInterests.length == 0}
+      <h2> This user has not expressed any interest </h2>
+    {:else}
+      {#each (pastInterests ? pastInterests : []) as interest}
+      <h2>{interest.member_id} who is {prepareInfoString(interest)}</h2>
+      {/each}
+    {/if}
+  {/if}
 {/if}
 </div>
+
+<style>
+  select {
+    margin-top: 1%;
+    font-size: larger;
+  }
+</style>
