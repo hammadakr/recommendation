@@ -128,7 +128,10 @@ def getTimeDecay(lastActiveTimestamp: int):
 
 @app.route("/past-interests/<member_id>", methods=['GET'])
 def getPastInterests(member_id):
-    member_id = int(member_id)
+    try:
+        member_id = int(member_id)
+    except Exception as e:
+        return f'Error: {e}', 400
     global reducedUsers, interest_df
     return reducedUsers[reducedUsers.member_id.isin(
         interest_df[interest_df.sender_id == member_id].receiver_id
