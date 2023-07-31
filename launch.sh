@@ -7,7 +7,14 @@ echo installing dependencies
 pip install -r requirements.txt
 echo killing already running server
 echo launching server
-cat /var/run/gunicorn.pid | xargs kill -HUP
-# gunicorn --bind 127.0.0.1:5000 --daemon main:app
-# gunicorn -c config/gunicorn_config.py main:app
-echo successfully launched!
+if test -e '/var/run/gunicorn.pid'
+then
+	cat /var/run/gunicorn.pid | xargs kill -HUP
+else
+	gunicorn -c config/gunicorn_config.py main:app
+fi
+
+if test -e '/var/run/gunicorn.pid'
+	echo successfully launched!
+else
+	echo launch was unsucessful!
