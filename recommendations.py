@@ -245,9 +245,9 @@ def getUserInfo(member_id):
         else:
             return "Member id not in data!"
     except ValueError as verr:
-        return "Exception Encountered: supplied 'member_id' is not an integer!"
+        return "Exception Encountered: supplied 'member_id' is not an integer!", 400
     except Exception as exc:
-        return "Invalid input!"
+        return "Invalid input!", 400
 
 
 def split_dataframe(df, chunk_size): 
