@@ -287,7 +287,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     timer.check('Gathering Preferences')
 
     # scores = pd.concat([(u_df @ vector) for u_df in split_dataframe(oneHotTieredUsers[vector.index], 10000)]).reset_index(drop=True)
-    chunk_size = 1000
+    chunk_size = 50000
     total_rows = oneHotTieredUsers.shape[0]
     results = []
     for i in range(0, total_rows, chunk_size):
