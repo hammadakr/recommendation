@@ -85,7 +85,7 @@ def updateUsers():
 def updateInterest():
     global logger
     INTEREST_URI = '../interestExport/feather'
-    INTEREST_API = ''
+    INTEREST_API = 'https://nikahforever.com/Ml/sent_interests'
 
     #REMOVE WHEN INTEREST API IS AVAILABLE
     return

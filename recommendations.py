@@ -105,10 +105,13 @@ def getEncodedUsers():
                 
     return encodedUsersOneHot
 
-def getInterest():
-    return performWithFileLock(INTEREST_URI, lambda : pd.read_feather(INTEREST_URI))
-
 reducedUsers = getReducedUsers()
+
+def getInterest():
+    global reducedUsers
+    i_df = performWithFileLock(INTEREST_URI, lambda : pd.read_feather(INTEREST_URI))
+    i_df = i_df[i_df.sender_id.isin(reducedUsers.member_id) & i_df.receiver_id.isin(reducedUsers.member_id)]
+    return i_df
 
 dummyCols = ['marital_status', 'permanent_state', 'highest_education',
              'occupation', 'caste', 'sect', 'employed', 'income', 'permanent_city']
@@ -287,6 +290,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     timer.check('Gathering Preferences')
 
     # scores = pd.concat([(u_df @ vector) for u_df in split_dataframe(oneHotTieredUsers[vector.index], 10000)]).reset_index(drop=True)
+    #performing the score calculation in chunks, to prevent out of memory
     chunk_size = 50000
     total_rows = oneHotTieredUsers.shape[0]
     results = []
@@ -338,7 +342,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     predictions.sort_values(by='score', inplace=True, ascending=False)
     timer.check('Calculating final metrics')
     # timer.log()
-    timer.end() 
+    timer.end()
     return {
         # 'error': errors,
         # 'user': senderInfo,4
