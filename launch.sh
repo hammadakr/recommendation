@@ -1,7 +1,6 @@
+#this is a script for pulling changes from git, installing all libs and restarting/launching the server
 echo pulling from git
 git pull origin
-#rm -r venv
-#python3 -m venv venv
 . venv/bin/activate
 echo installing dependencies
 pip install -r requirements.txt
