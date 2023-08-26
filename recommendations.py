@@ -85,7 +85,7 @@ def getReducedUsers():
     )
     today = datetime.date.today()
     reducedUsers['age'] = reducedUsers.date_of_birth.apply(lambda x: relativedelta.relativedelta(datetime.date.fromtimestamp(x), today).years)
-    reducedUsers.drop(columns=['date_of_birth', 'permanent_state', 'permanent_country', 'permanent_city'], inplace=True)
+    reducedUsers.drop(columns=['date_of_birth', 'permanent_country', 'permanent_city'], inplace=True)
     return reducedUsers
 
 def buildNanMap():
