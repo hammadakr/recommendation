@@ -70,6 +70,7 @@
     helperRenamer('sect', 'sub_caste')
     helperRenamer('occupation', 'designation')
     helperRenamer('employed', 'occupation')
+    userInfoInput['permanent_city'] = 'abra';
 
     // userInfo['status'] = 'approve_status'
     // userInfo['gallery'] = 'gallery_display'
