@@ -1,5 +1,6 @@
 import math
 import datetime
+from dateutil import relativedelta
 import calendar
 import time
 from functools import wraps
@@ -82,10 +83,14 @@ def getReducedUsers():
         reducedUsers.lastonline.apply(lambda x: calendar.month_abbr[datetime.date.fromtimestamp(x).month]).astype(str) +
         ")"
     )
+    today = datetime.date.today()
+    reducedUsers['age'] = reducedUsers.date_of_birth.apply(lambda x: relativedelta.relativedelta(datetime.date.fromtimestamp(x), today).years)
+    reducedUsers.drop(columns=['date_of_birth'], inplace=True)
     return reducedUsers
 
 def buildNanMap():
     global reducedUsers
+
     return dict(zip(dummyCols, [[f'{y}_{x}' for x in reducedUsers[y].astype(str).unique() if (x.endswith('nan'))] for y in dummyCols]))
 
 def getEncodedUsers():
@@ -166,6 +171,7 @@ def prepareUserFormData(member_id, userData):
         'age', 'gender', 'membership', 'gallery', 'status',
         'marital_status', 'permanent_country', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect'
     ]
+    #todo replace age with dob
     userFormData = dict(zip(userFormData, userFormData))
     userFormData['status'] = 'approve_status'
     userFormData['gallery'] = 'gallery_display'
@@ -233,7 +239,9 @@ def prepareUserFormData(member_id, userData):
         ")"
     )
 
-    return df.drop(columns=['permanent_country'])
+    df['date_of_birth'] = df['age'].apply(lambda x: relativedelta.relativedelta(datetime.date.fromtimestamp(x), datetime.date.today()).years)
+
+    return df.drop(columns=['permanent_country', 'age'])
 
 @app.route("/get-user-info/<member_id>", methods=['GET'])
 @topLevelCatcher
