@@ -85,7 +85,7 @@ def getReducedUsers():
     )
     today = datetime.date.today()
     reducedUsers['age'] = reducedUsers.date_of_birth.apply(lambda x: relativedelta.relativedelta(datetime.date.fromtimestamp(x), today).years)
-    reducedUsers.drop(columns=['date_of_birth'], inplace=True)
+    reducedUsers.drop(columns=['date_of_birth', 'permanent_state', 'permanent_country', 'permanent_city'], inplace=True)
     return reducedUsers
 
 def buildNanMap():
@@ -119,7 +119,7 @@ def getInterest():
     return i_df
 
 dummyCols = ['marital_status', 'permanent_state', 'highest_education',
-             'occupation', 'caste', 'sect', 'employed', 'income', 'permanent_city']
+             'occupation', 'caste', 'sect', 'employed', 'income']
 nanMap = buildNanMap()
 encodedUsersOneHot = getEncodedUsers()
 
@@ -145,23 +145,6 @@ def getPastInterests(member_id):
         interest_df[interest_df.sender_id == member_id].receiver_id
         )].to_dict(orient='records')
 
-def getPopularCities():
-    try:
-        return pd.read_csv('popular_cities.csv') 
-    except:
-        global reducedUsers, interest_df
-        popular_cities = pd.merge(
-            interest_df,
-            reducedUsers[['member_id', 'permanent_city']], left_on='receiver_id', right_on='member_id'
-        ).groupby(
-            by=['permanent_city']
-        )['receiver_id'].count().reset_index().sort_values(
-            'receiver_id', ascending=False
-        ).head(100)
-        popular_cities.to_csv('popular_cities.csv', index=False)
-        return popular_cities
-
-popular_cities = getPopularCities()
 
 def prepareUserFormData(member_id, userData):
     if userData is None:
@@ -226,8 +209,6 @@ def prepareUserFormData(member_id, userData):
             df[col] = df[col].astype(cols_type)
 
     df.loc[:, 'permanent_state'] = df.apply(lambda row: 'Foreign' if row.permanent_country != 'India' else row.permanent_state, axis=1)
-    global popular_cities
-    df.loc[(~df.permanent_city.isin(popular_cities.permanent_city)) & (~df.permanent_city.isna()), 'permanent_city'] = 'Others'
     
     df['lastActiveDate'] = df.lastonline.apply(datetime.date.fromtimestamp)
     df['monthYear'] = (
@@ -282,7 +263,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
 
     values = []
     cols = []
-    for category in [x for x in dummyCols if x != 'permanent_city']:
+    for category in [x for x in dummyCols]:
         idx = [x for x in preferences.index if x.startswith(category)]
         weight = 5**(preferences[idx].max())
         for tier in idx:
