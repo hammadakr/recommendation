@@ -87,7 +87,6 @@ def updateInterest():
     INTEREST_URI = '../interestExport.feather'
     INTEREST_API = 'https://nikahforever.com/Ml/sent_interests'
 
-    return
     interest = performWithFileLock(INTEREST_URI, lambda: pd.read_feather(INTEREST_URI))
     
     try:
