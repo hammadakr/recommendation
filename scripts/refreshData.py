@@ -40,12 +40,17 @@ def setup_logger(log_file, log_level=logging.DEBUG):
 
 logger = setup_logger("cronJobRefresh.log", logging.DEBUG)
 
+USER_URI = '../userExport.feather'
+UPDATES_URI = '../userUpdation.csv'
+INTEREST_URI = '../interestExport.feather'
+INTEREST_API = 'https://nikahforever.com/Ml/sent_interests'
+USERS_API = 'https://nikahforever.com/Ml/updated_members_info'
+LAST_DELIVERY_JSON = 'lastUserDelivery.json'
+LAST_TIMESTAMP_URI = 'lastTimestamp.json'
+
 def updateUsers():
     global logger
     try:
-        USER_URI = '../userExport.feather'
-        UPDATES_URI = '../userUpdation.csv'
-
         users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
 
         def readAndClearUpdates():
@@ -82,11 +87,51 @@ def updateUsers():
     except Exception as e:
         logger.error(e)
 
+import updatedMembersParser as updateParser
+import json
+import datetime
+from dateutil import relativedelta
+
+def updateUsersViaApi():
+    global logger
+    try:
+        users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
+
+        lastTimestamp = int((datetime.datetime.now() - relativedelta.relativedelta(days=7)).timestamp())
+        try:
+            with open(LAST_TIMESTAMP_URI, 'r') as file:
+                lastTimestamp = json.load(file)
+        except Exception as e:
+            logger.error(f'Could not load last timestamp error: {e}')
+
+        with open(LAST_TIMESTAMP_URI, 'w') as file:
+            json.dump({"time" : int(datetime.datetime.now())}, file)
+
+        with open(LAST_DELIVERY_JSON, 'w') as file:
+            #receiving invalid json from server
+            file.write(requests.post(USERS_API, { 'time' : lastTimestamp}).text)
+
+        newOrChangedUsers = updateParser.prepareDF(updateParser.loadBadFileIntoJson(LAST_DELIVERY_JSON))
+        #only take approved users (need to delete deactivated)
+        newOrChangedUsers = newOrChangedUsers[newOrChangedUsers.status == 1]
+
+        idx = newOrChangedUsers.member_id.isin(users.member_id)
+        newUsers = newOrChangedUsers[~idx]
+        changedUsers = newOrChangedUsers[idx]
+        
+        users.set_index('member_id', inplace=True)
+        users.update(changedUsers.set_index('member_id'))
+        users.reset_index(inplace=True)
+        users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
+
+        performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
+        logger.info(f'Updated Users via api added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
+    
+    except Exception as e:
+        logger.error(f'refreshing users via api error: {e}')
+
 def updateInterest():
     global logger
-    INTEREST_URI = '../interestExport.feather'
-    INTEREST_API = 'https://nikahforever.com/Ml/sent_interests'
-
     interest = performWithFileLock(INTEREST_URI, lambda: pd.read_feather(INTEREST_URI))
     
     try:
@@ -124,6 +169,8 @@ def restartServer():
 if __name__ == '__main__':
     #todo save updation timestamp
     updateUsers()   
+    gc.collect()
+    updateUsersViaApi()
     gc.collect()
     updateInterest()
     restartServer()

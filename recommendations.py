@@ -220,7 +220,7 @@ def prepareUserFormData(member_id, userData):
         ")"
     )
 
-    df['date_of_birth'] = df['age'].apply(lambda x: relativedelta.relativedelta(datetime.date.fromtimestamp(x), datetime.date.today()).years)
+    df['date_of_birth'] = df['age'].apply(lambda x: (datetime.datetime.now() - relativedelta.relativedelta(years=x)).timestamp())
 
     return df.drop(columns=['permanent_country', 'age'])
 
@@ -417,7 +417,9 @@ def recommendation():
             errors.append(f'Recommendation: Error: invalid {key} using default values {val}')
     if (userData.status == 1).sum():
         #only add if user is approved
-        addUpdation(userData)
+        #note: stopped adding updations here
+        pass
+        # addUpdation(userData)
 
     gc.collect()
     return createRecommendationResults(member_id=member_id, userData=userData, errors=errors, **controlParams)
