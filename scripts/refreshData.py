@@ -77,7 +77,7 @@ def updateUsers():
         int64s = ['lastonline', 'date_of_birth']
         strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
         
-        for cols, cols_type in zip([strings, int8s, int64s], [np.str_, np.int8, np.int64]):
+        for cols, cols_type in zip([strings, int8s, int64s], ["category", np.int8, np.int64]):
             for col in cols:
                 users[col] = users[col].astype(cols_type)
 

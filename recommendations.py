@@ -132,6 +132,17 @@ PROFILE_DECAY_CONSTANT = math.log(2) / PROFILE_HALF_LIFE_WEEKS
 LATEST_ONLINE_DAY = datetime.date.fromtimestamp(reducedUsers['lastonline'].max())
 gc.collect()
 
+# discovery: reducedUsers actually takes up enormous amounts of memory (188MB in tests)
+# when I changed the types to categorical it went down to 36MB
+# interest df also takes 78MB if i drop timestamp it goes down to 53
+# strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
+# for s in strings:
+    # reducedUsers[s] = reducedUsers[s].astype("category")
+# print(f'reducedUsers: \n{reducedUsers.memory_usage(deep=True)}\n{reducedUsers.memory_usage(deep=True).sum()//(1000*1000)}\n{reducedUsers.dtypes}')
+# print(f'encodedUsers Male: \n{encodedUsersOneHot["Male"].memory_usage(deep=True).sum()//(1000*1000)}')
+# print(f'encodedUsers Female: \n{encodedUsersOneHot["Female"].memory_usage(deep=True).sum()//(1000*1000)}')
+# print(f'interest: \n{interest_df.memory_usage(deep=True)}\n{interest_df.memory_usage(deep=True).sum()//(1000*1000)}\n{interest_df.dtypes}')
+
 def getTimeDecay(lastActiveTimestamp: int):
     weeksSinceActive = (LATEST_ONLINE_DAY - datetime.date.fromtimestamp(lastActiveTimestamp)).days // 7
     decay = math.e**(-PROFILE_DECAY_CONSTANT*weeksSinceActive)
@@ -197,7 +208,7 @@ def prepareUserFormData(member_id, userData):
     int64s = ['lastonline']
     strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
     
-    MAX_STRING_LENGTH_IN_DATA = 22
+    MAX_STRING_LENGTH_IN_DATA = 30
     for col in strings:
         df_dict[col] = df_dict[col][:MAX_STRING_LENGTH_IN_DATA] if (df_dict[col] is not None) and (df_dict[col] != '') else np.nan
 
@@ -207,7 +218,7 @@ def prepareUserFormData(member_id, userData):
     df['status'] = (df.status == 'approved').astype(int)
     df['lastonline'] = int(datetime.datetime.now().timestamp())
 
-    for cols, cols_type in zip([strings, int8s, int32s, int64s], [np.str_, np.int8, np.int32, np.int64]):
+    for cols, cols_type in zip([strings, int8s, int32s, int64s], ["category", np.int8, np.int32, np.int64]):
         for col in cols:
             df[col] = df[col].astype(cols_type)
 
