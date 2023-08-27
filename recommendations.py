@@ -111,6 +111,7 @@ def getEncodedUsers():
     return encodedUsersOneHot
 
 reducedUsers = getReducedUsers()
+gc.collect()
 
 def getInterest():
     global reducedUsers
@@ -122,12 +123,14 @@ dummyCols = ['marital_status', 'permanent_state', 'highest_education',
              'occupation', 'caste', 'sect', 'employed', 'income']
 nanMap = buildNanMap()
 encodedUsersOneHot = getEncodedUsers()
+gc.collect()
 
 interest_df = getInterest()
 
 PROFILE_HALF_LIFE_WEEKS = 26
 PROFILE_DECAY_CONSTANT = math.log(2) / PROFILE_HALF_LIFE_WEEKS
 LATEST_ONLINE_DAY = datetime.date.fromtimestamp(reducedUsers['lastonline'].max())
+gc.collect()
 
 def getTimeDecay(lastActiveTimestamp: int):
     weeksSinceActive = (LATEST_ONLINE_DAY - datetime.date.fromtimestamp(lastActiveTimestamp)).days // 7
