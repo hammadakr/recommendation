@@ -97,7 +97,7 @@ def updateUsersViaApi():
     try:
         users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
 
-        lastTimestamp = int((datetime.datetime.now() - relativedelta.relativedelta(days=7)).timestamp())
+        lastTimestamp = int((datetime.datetime.now() - relativedelta.relativedelta(days=1)).timestamp())
         try:
             with open(LAST_TIMESTAMP_URI, 'r') as file:
                 lastTimestamp = json.load(file)

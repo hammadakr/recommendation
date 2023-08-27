@@ -54,6 +54,7 @@ def parseUser(user : dict):
 
 def prepareDF(updatedUsersJson : dict) -> pd.DataFrame:
     int8s = ['gallery', 'status']
+    int32s = ['member_id']
     int64s = ['lastonline', 'date_of_birth']
     strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
 
@@ -66,7 +67,7 @@ def prepareDF(updatedUsersJson : dict) -> pd.DataFrame:
     df['date_of_birth'] = df['age'].apply(lambda x: (datetime.datetime.now() - relativedelta.relativedelta(years=x)).timestamp())
 
 
-    for cols, cols_type in zip([strings, int8s, int64s], [np.str_, np.int8, np.int64]):
+    for cols, cols_type in zip([strings, int8s, int32s, int64s], [np.str_, np.int8, np.int32, np.int64]):
         for col in cols:
             df[col] = df[col].astype(cols_type)
 
