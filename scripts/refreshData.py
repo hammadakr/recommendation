@@ -105,7 +105,7 @@ def updateUsersViaApi():
             logger.error(f'Could not load last timestamp error: {e}')
 
         with open(LAST_TIMESTAMP_URI, 'w') as file:
-            json.dump({"time" : int(datetime.datetime.now())}, file)
+            json.dump({"time" : int(datetime.datetime.now().timestamp())}, file)
 
         with open(LAST_DELIVERY_JSON, 'w') as file:
             #receiving invalid json from server
