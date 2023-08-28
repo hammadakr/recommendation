@@ -116,7 +116,8 @@ gc.collect()
 def getInterest():
     global reducedUsers
     i_df = performWithFileLock(INTEREST_URI, lambda : pd.read_feather(INTEREST_URI))
-    i_df = i_df[i_df.sender_id.isin(reducedUsers.member_id) & i_df.receiver_id.isin(reducedUsers.member_id)]
+    # i_df = i_df[i_df.sender_id.isin(reducedUsers.member_id) & i_df.receiver_id.isin(reducedUsers.member_id)]
+    i_df = i_df[i_df.receiver_id.isin(reducedUsers.member_id)]
     return i_df
 
 dummyCols = ['marital_status', 'permanent_state', 'highest_education',
