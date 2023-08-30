@@ -347,6 +347,8 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     timer.check('Calculating final metrics')
     # timer.log()
     timer.end()
+
+    predictions = predictions.replace(np.nan, None)
     return {
         # 'error': errors,
         # 'user': senderInfo,4
