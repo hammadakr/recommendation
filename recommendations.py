@@ -351,7 +351,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     if withInfo:
         for col in predictions:
             if predictions[col].dtype.name == 'category':
-                predictions[col].cat.add_categories([0])
+                predictions[col] = predictions[col].cat.add_categories([0])
         predictions.fillna(0, inplace=True)
     return {
         # 'error': errors,
