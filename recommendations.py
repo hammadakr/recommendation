@@ -348,7 +348,7 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     # timer.log()
     timer.end()
 
-    predictions.fillna(value=None, inplace=True)
+    predictions.fillna(0, inplace=True)
     return {
         # 'error': errors,
         # 'user': senderInfo,4
