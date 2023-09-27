@@ -7,7 +7,7 @@ from dateutil import relativedelta
 
 def parseUser(user : dict):
     userFormData = [
-        'member_id', 'age', 'gender', 'membership', 'gallery', 'status',
+        'member_id', 'date_of_birth', 'gender', 'membership', 'gallery', 'status',
         'marital_status', 'permanent_country', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect'
     ]
     userFormData = dict(zip(userFormData, userFormData))
@@ -59,20 +59,18 @@ def prepareDF(updatedUsersJson : dict) -> pd.DataFrame:
     strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
 
     df = pd.DataFrame([parseUser(user['userData']) for user in updatedUsersJson['data']])
-    df = df[~ (df.member_id.isna() | df.gender.isna() | df.age.isna() | df.membership.isna() | df.marital_status.isna())]
+    df = df[~ (df.member_id.isna() | df.gender.isna() | df.date_of_birth.isna() | df.membership.isna() | df.marital_status.isna())]
 
     df['gallery'] = (df.gallery == 'yes').astype(int)
     df['status'] = (df.status == 'approved').astype(int)
     df['lastonline'] = int(datetime.datetime.now().timestamp())
-    df['date_of_birth'] = df['age'].apply(lambda x: (datetime.datetime.now() - relativedelta.relativedelta(years=x)).timestamp())
-
 
     for cols, cols_type in zip([strings, int8s, int32s, int64s], ["category", np.int8, np.int32, np.int64]):
         for col in cols:
             df[col] = df[col].astype(cols_type)
 
     df.loc[:, 'permanent_state'] = df.apply(lambda row: 'Foreign' if row.permanent_country != 'India' else row.permanent_state, axis=1)
-    return df.drop(columns=['age']).drop_duplicates(subset=['member_id'], keep='last')
+    return df.drop_duplicates(subset=['member_id'], keep='last')
 
 def loadBadFileIntoJson(filename : str):
     textData = ''

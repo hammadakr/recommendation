@@ -1,6 +1,6 @@
-echo `tail -c 1000 cronJobRefresh.log` > cronJobRefresh.log
-echo `tail -c 1000 ../my_logfile.log` > ../my_logfile.log 
-echo `tail -c 1000 /var/log/cron.log` > /var/log/cron.log
-echo `tail -c 1000 /var/log/gunicorn/access.log` > /var/log/gunicorn/access.log 
-echo `tail -c 1000 /var/log/gunicorn/error.log` > /var/log/gunicorn/error.log
-echo `tail -c 1000 /var/log/httpbot.log` > /var/log/httpbot.log
+truncate -s 5M cronJobRefresh.log
+truncate -s 5M ../my_logfile.log 
+truncate -s 5M /var/log/cron.log
+truncate -s 5M /var/log/gunicorn/access.log
+truncate -s 5M /var/log/gunicorn/error.log
+truncate -s 5M /var/log/httpbot.log

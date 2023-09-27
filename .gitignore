@@ -20,3 +20,4 @@ scripts/cronJobRefresh.log
 my_logfile.log
 userExport.feather.test
 userExport.feather.test.lock
+scripts/lastUserDelivery.json

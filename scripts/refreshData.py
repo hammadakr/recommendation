@@ -100,7 +100,7 @@ def updateUsersViaApi():
         lastTimestamp = int((datetime.datetime.now() - relativedelta.relativedelta(days=1)).timestamp())
         try:
             with open(LAST_TIMESTAMP_URI, 'r') as file:
-                lastTimestamp = json.load(file)
+                lastTimestamp = int(json.load(file)['time'])
         except Exception as e:
             logger.error(f'Could not load last timestamp error: {e}')
 

@@ -123,8 +123,10 @@ def getInterest():
 dummyCols = ['marital_status', 'permanent_state', 'highest_education',
              'occupation', 'caste', 'sect', 'employed', 'income']
 nanMap = buildNanMap()
+print('building encoded')
 encodedUsersOneHot = getEncodedUsers()
 gc.collect()
+print('building interest')
 
 interest_df = getInterest()
 
@@ -132,6 +134,7 @@ PROFILE_HALF_LIFE_WEEKS = 26
 PROFILE_DECAY_CONSTANT = math.log(2) / PROFILE_HALF_LIFE_WEEKS
 LATEST_ONLINE_DAY = datetime.date.fromtimestamp(reducedUsers['lastonline'].max())
 gc.collect()
+print('all done')
 
 # discovery: reducedUsers actually takes up enormous amounts of memory (188MB in tests)
 # when I changed the types to categorical it went down to 36MB
