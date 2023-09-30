@@ -72,6 +72,17 @@ UPDATED_USERS_COLUMN_FORMAT = performWithFileLock(UPDATION_URI, lambda: pd.read_
 def addUpdation(updatedUser : pd.DataFrame) -> None:
     performWithFileLock(UPDATION_URI, lambda : updatedUser.drop(columns=['lastActiveDate', 'monthYear'])[UPDATED_USERS_COLUMN_FORMAT].to_csv(UPDATION_URI, mode='a', index=False, header=False))
 
+USER_ACTIVATION_FILE = 'userActivation.list'
+def activateUser(member_id : int):
+    def activationFunc():
+        try:
+            with open(USER_ACTIVATION_FILE, 'a') as file:
+                file.write(str(member_id) + '\n')
+        except FileNotFoundError:
+            with open(USER_ACTIVATION_FILE, 'w') as file:
+                file.write(str(member_id) + '\n')
+    performWithFileLock(USER_ACTIVATION_FILE, activationFunc)
+
 def getReducedUsers():
     reducedUsers = performWithFileLock(USERS_URI, lambda : pd.read_feather(USERS_URI))
     reducedUsers['lastActiveDate'] = reducedUsers.lastonline.apply(datetime.date.fromtimestamp)
@@ -265,13 +276,11 @@ def split_dataframe(df, chunk_size):
     for i in range(num_chunks):
         yield df[i*chunk_size:(i+1)*chunk_size]
 
-def createRecommendationResults(member_id, userData, offset, count, withInfo, timeMix, premiumMix, galleryMix, errors = []):
+def createRecommendationResults(member_id, senderIsFemme, offset, count, withInfo, timeMix, premiumMix, galleryMix, errors = []):
     timer = Timer()
     timer.start()
     global reducedUsers, encodedUsersOneHot, interest_df, dummyCols
 
-    senderInfo = userData.to_dict(orient='records')[0]
-    senderIsFemme = senderInfo['gender'] == 'Female'
     senderGender = ('Female' if senderIsFemme else 'Male')
 
     oneHotTieredUsers = encodedUsersOneHot[senderGender]
@@ -315,10 +324,10 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
     timer.check('Calculating base score')
 
     scoredUsers = pd.DataFrame(
-        {'member_id': oneHotTieredUsers.member_id, 'score': scores})
+        {'member_id': oneHotTieredUsers.member_id.sparse.to_dense(), 'score': scores})
 
     predictions = pd.merge(
-        scoredUsers[['member_id', 'score']].sparse.to_dense(),
+        scoredUsers[['member_id', 'score']],
         reducedUsers, on='member_id'
     )
 
@@ -357,56 +366,17 @@ def createRecommendationResults(member_id, userData, offset, count, withInfo, ti
                 predictions[col] = predictions[col].cat.add_categories([0])
         predictions.fillna(0, inplace=True)
     return {
-        # 'error': errors,
-        # 'user': senderInfo,4
-        # 'timeframeCounts' : predictions.monthYear.value_counts().to_dict(),
         'userInterestCount': match_df.shape[0],
         'percentageResultsPremium' : percentageRecommendationsPremium,
         'percentageResultsHaveGallery' : percentageRecommendationsGallery,
         'userRecommendations': predictions[predictions.columns if withInfo else ['member_id', 'score']].to_dict(orient='records')
     }
 
-@app.route("/update-user", methods=['POST'])
-@topLevelCatcher
-def updateUser():
-    global logger
-    timer = Timer()
-    timer.start()
-    errors = []
-    timer.check('Fetching data')
-    
-    member_id = None
-    try:
-        member_id = int(request.form['member_id'])
-    except ValueError as verr:
-        return "Recommendation: Exception Encountered: supplied 'member_id' is not an integer!", 400
-    except Exception as exc:
-        return "Recommendation: Invalid input!", 400
-
-    formUserData = json.loads(request.form['userData'])
-    userData = None
- 
-    try:
-        userData = prepareUserFormData(member_id=member_id, userData=formUserData)
-    except Exception as e:
-        logger.error(e)
-        return f'Recommendation: Error: {e}\n{json.dumps(formUserData)}', 400
-
-    if (userData.status == 1).sum():
-        #only add if user is approved
-        addUpdation(userData)
-
-    gc.collect()
-    return Response(status=204)
-
 @app.route("/recommendation", methods=['POST'])
 @topLevelCatcher
 def recommendation():
     global logger
-    timer = Timer()
-    timer.start()
     errors = []
-    timer.check('Fetching data')
     
     member_id = None
     try:
@@ -417,15 +387,16 @@ def recommendation():
         return "Recommendation: Invalid input!", 400
 
     formUserData = json.loads(request.form['userData'])
-    userData = None
+    if 'gender' not in formUserData:
+        return f'Input userData has no key gender', 400
+    
+    formGender = str(formUserData['gender']).lower()
+    senderIsFemme = False
+    if formGender in ['1', 'male']:
+        senderIsFemme = False
+    elif formGender in ['2', 'female']:
+        senderIsFemme = True
  
-    try:
-        userData = prepareUserFormData(member_id=member_id, userData=formUserData)
-    except Exception as e:
-        logger.error(e)
-        return f'Recommendation: Error: {e}\n{json.dumps(formUserData)}', 400
-
-    # return f'userdata: {userData.to_dict(orient="records")[0]}\nreceiveddata: {formUserData}'
     controlParams = dict(
         offset = 0,
         count = 50,
@@ -439,37 +410,10 @@ def recommendation():
             controlParams[key] = type(val)(request.form[key])
         except:
             errors.append(f'Recommendation: Error: invalid {key} using default values {val}')
-    if (userData.status == 1).sum():
-        #only add if user is approved
-        #note: stopped adding updations here
-        pass
-        # addUpdation(userData)
 
     gc.collect()
-    return createRecommendationResults(member_id=member_id, userData=userData, errors=errors, **controlParams)
- 
-
-def setUserStatus(status):
-    member_id = None
-    try:
-        member_id = int(request.form['member_id'])
-    except ValueError as verr:
-        return "Recommendation: Exception Encountered: supplied 'member_id' is not an integer!", 400
-    except Exception as exc:
-        return "Recommendation: Invalid input!", 400
-
-    addUpdation(reducedUsers[reducedUsers.member_id == member_id])
-    return Response(status=204)
-
-@app.route('/deactivate', methods=['POST'])
-@topLevelCatcher
-def deactivate():
-    return setUserStatus(status=0);
- 
-@app.route('/activate', methods=['POST'])
-@topLevelCatcher
-def activate():
-    return setUserStatus(status=1);
+    activateUser(member_id=member_id)
+    return createRecommendationResults(member_id=member_id, senderIsFemme=senderIsFemme, errors=errors, **controlParams)
 
 TESTING_WEBSITE_PATH = 'nf-recs-svelte/dist/'
 

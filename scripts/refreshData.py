@@ -47,74 +47,55 @@ INTEREST_API = 'https://nikahforever.com/Ml/sent_interests'
 USERS_API = 'https://nikahforever.com/Ml/updated_members_info'
 LAST_DELIVERY_JSON = 'lastUserDelivery.json'
 LAST_TIMESTAMP_URI = 'lastTimestamp.json'
+USER_ACTIVATION_FILE = '../userActivation.list'
 
-def updateUsers():
-    global logger
-    try:
-        users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
+DELETED_USERS_API = 'https://nikahforever.com/Ml/delted_members'
+LAST_DELETE_DELIVERY = 'lastUserDeleteDelivery.json'
+def fetchActivatedUsers() -> list:
+    def readActivationsFunc():
+        activations = []
+        try:
+            with open(USER_ACTIVATION_FILE, 'r') as file:
+                activations = [int(x) for x in file.readlines()]
+        except FileNotFoundError:
+            activations = []
+        return activations
+    return performWithFileLock(USER_ACTIVATION_FILE, readActivationsFunc)
 
-        def readAndClearUpdates():
-            read = pd.read_csv(UPDATES_URI)
-            pd.DataFrame(columns=read.columns).to_csv(UPDATES_URI, index=False)
-            return read
-
-        newOrChangedUsers = performWithFileLock(UPDATES_URI, readAndClearUpdates)
-        newOrChangedUsers = newOrChangedUsers.sort_values('lastonline', ascending=False).drop_duplicates(['member_id'])
-        #only take approved users (need to delete deactivated)
-        newOrChangedUsers = newOrChangedUsers[newOrChangedUsers.status == 1]
-
-        idx = newOrChangedUsers.member_id.isin(users.member_id)
-        newUsers = newOrChangedUsers[~idx]
-        changedUsers = newOrChangedUsers[idx]
-        users.set_index('member_id', inplace=True)
-        users.update(changedUsers.set_index('member_id'))
-        users.reset_index(inplace=True)
-
-        users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
-        users = users[users.gender.notna()]
-
-        int8s = ['gallery', 'status']
-        int64s = ['lastonline', 'date_of_birth']
-        strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
-        
-        for cols, cols_type in zip([strings, int8s, int64s], ["category", np.int8, np.int64]):
-            for col in cols:
-                users[col] = users[col].astype(cols_type)
-
-        performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
-        logger.info(f'Updated Users added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
-    
-    except Exception as e:
-        logger.error(e)
 
 import updatedMembersParser as updateParser
 import json
 import datetime
 from dateutil import relativedelta
+import os
+
+def activateUsers():
+    try:      
+        users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))  
+        activatedUsers = list(set(fetchActivatedUsers()))
+        users.loc[users.member_id.isin(activatedUsers), 'status'] = 1
+        performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
+        os.remove(USER_ACTIVATION_FILE)
+        print(f'Updated Users activated {len(activatedUsers)}')
+    except Exception as e:
+        print(e)
 
 def updateUsersViaApi():
-    global logger
     try:
-        users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
-
-        lastTimestamp = int((datetime.datetime.now() - relativedelta.relativedelta(days=1)).timestamp())
         try:
-            with open(LAST_TIMESTAMP_URI, 'r') as file:
-                lastTimestamp = int(json.load(file)['time'])
+            jsonData = {}
+            with open(LAST_DELIVERY_JSON, 'w') as file:
+                jsonData = requests.post(USERS_API).json()
+                if 'response' in jsonData:
+                    print('nothing received to update users')
+                    return
+                json.dump(jsonData, file)
         except Exception as e:
-            logger.error(f'Could not load last timestamp error: {e}')
-
-        with open(LAST_TIMESTAMP_URI, 'w') as file:
-            json.dump({"time" : int(datetime.datetime.now().timestamp())}, file)
-
-        with open(LAST_DELIVERY_JSON, 'w') as file:
-            #receiving invalid json from server
-            file.write(requests.post(USERS_API, { 'time' : lastTimestamp}).text)
-
-        newOrChangedUsers = updateParser.prepareDF(updateParser.loadBadFileIntoJson(LAST_DELIVERY_JSON))
+            print(f'Error parsing user update json: {e}')
+            raise e
+        newOrChangedUsers = updateParser.prepareDF(jsonData)
         #only take approved users (need to delete deactivated)
         newOrChangedUsers = newOrChangedUsers[newOrChangedUsers.status == 1]
-
         idx = newOrChangedUsers.member_id.isin(users.member_id)
         newUsers = newOrChangedUsers[~idx]
         changedUsers = newOrChangedUsers[idx]
@@ -125,10 +106,32 @@ def updateUsersViaApi():
         users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
 
         performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
-        logger.info(f'Updated Users via api added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
+        print(f'Updated Users via api added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
     
     except Exception as e:
-        logger.error(f'refreshing users via api error: {e}')
+        print(f'refreshing users via api error: {e}')
+
+
+def updateDeletedUsers():
+        try:
+            deletedJson = {}
+            with open(LAST_DELETE_DELIVERY, 'w') as file:
+                deletedJson = requests.get(DELETED_USERS_API).json()
+                json.dump(deletedJson, file)
+            
+            if 'deleted_members' in deletedJson and len(deletedJson['deleted_members']) > 0:
+                deleted_df = pd.DataFrame(deletedJson['deleted_members'])
+                deleted_df['member_id'] = deleted_df['member_id'].astype(np.int32)
+
+                users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
+                print(f'old num users: {len(users)}')
+                users = users[~users.member_id.isin(deleted_df.member_id)]
+                print(f'new num users: {len(users)}')
+                performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
+            else:
+                print(f'No users to delete!')
+        except Exception as e:
+            print(f'refreshing deleted users via api error: {e}')
 
 def updateInterest():
     global logger
@@ -168,7 +171,8 @@ def restartServer():
 
 if __name__ == '__main__':
     #todo save updation timestamp
-    updateUsers()   
+    activateUsers()
+    updateDeletedUsers()   
     gc.collect()
     updateUsersViaApi()
     gc.collect()

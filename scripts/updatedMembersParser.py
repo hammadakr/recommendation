@@ -31,7 +31,7 @@ def parseUser(user : dict):
             missing_columns.append(col)
 
     if missing_columns:
-        return {}
+        # return {}
         raise Exception(f'missing columns: {", ".join(missing_columns)}')
 
     newUser = dict(zip(list(userFormData.keys()), values))
@@ -58,7 +58,7 @@ def prepareDF(updatedUsersJson : dict) -> pd.DataFrame:
     int64s = ['lastonline', 'date_of_birth']
     strings = ['gender', 'membership', 'marital_status', 'permanent_state', 'permanent_city', 'highest_education', 'occupation', 'employed', 'income', 'caste', 'sect']
 
-    df = pd.DataFrame([parseUser(user['userData']) for user in updatedUsersJson['data']])
+    df = pd.DataFrame([parseUser(user) for user in updatedUsersJson['userData']])
     df = df[~ (df.member_id.isna() | df.gender.isna() | df.date_of_birth.isna() | df.membership.isna() | df.marital_status.isna())]
 
     df['gallery'] = (df.gallery == 'yes').astype(int)
