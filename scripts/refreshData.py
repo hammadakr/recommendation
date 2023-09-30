@@ -75,7 +75,10 @@ def activateUsers():
         activatedUsers = list(set(fetchActivatedUsers()))
         users.loc[users.member_id.isin(activatedUsers), 'status'] = 1
         performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
-        os.remove(USER_ACTIVATION_FILE)
+        try:
+            os.remove(USER_ACTIVATION_FILE)
+        except Exception as e:
+            print(f'Could not delete {USER_ACTIVATION_FILE} as error: {e}')
         print(f'Updated Users activated {len(activatedUsers)}')
     except Exception as e:
         print(e)
@@ -96,6 +99,7 @@ def updateUsersViaApi():
         newOrChangedUsers = updateParser.prepareDF(jsonData)
         #only take approved users (need to delete deactivated)
         newOrChangedUsers = newOrChangedUsers[newOrChangedUsers.status == 1]
+        users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
         idx = newOrChangedUsers.member_id.isin(users.member_id)
         newUsers = newOrChangedUsers[~idx]
         changedUsers = newOrChangedUsers[idx]
@@ -125,9 +129,11 @@ def updateDeletedUsers():
 
                 users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
                 print(f'old num users: {len(users)}')
-                users = users[~users.member_id.isin(deleted_df.member_id)]
+                oldLength = len(users)
+                users = users[~users.member_id.isin(deleted_df.member_id)].reset_index(drop=True)
                 print(f'new num users: {len(users)}')
                 performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
+                print(f'deleted {oldLength - len(users)} users')
             else:
                 print(f'No users to delete!')
         except Exception as e:
