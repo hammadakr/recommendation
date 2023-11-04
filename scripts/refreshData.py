@@ -78,10 +78,10 @@ def activateUsers():
         try:
             os.remove(USER_ACTIVATION_FILE)
         except Exception as e:
-            print(f'Could not delete {USER_ACTIVATION_FILE} as error: {e}')
-        print(f'Updated Users activated {len(activatedUsers)}')
+            logger.info(f'Could not delete {USER_ACTIVATION_FILE} as error: {e}')
+        logger.info(f'Updated Users activated {len(activatedUsers)}')
     except Exception as e:
-        print(e)
+        logger.info(e)
 
 def updateUsersViaApi():
     try:
@@ -90,11 +90,11 @@ def updateUsersViaApi():
             with open(LAST_DELIVERY_JSON, 'w') as file:
                 jsonData = requests.post(USERS_API).json()
                 if 'response' in jsonData:
-                    print('nothing received to update users')
+                    logger.info('nothing received to update users')
                     return
                 json.dump(jsonData, file)
         except Exception as e:
-            print(f'Error parsing user update json: {e}')
+            logger.info(f'Error parsing user update json: {e}')
             raise e
         newOrChangedUsers = updateParser.prepareDF(jsonData)
         #only take approved users (need to delete deactivated)
@@ -110,10 +110,10 @@ def updateUsersViaApi():
         users = pd.concat([users, newUsers]).reset_index().drop(columns=['index'])
 
         performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
-        print(f'Updated Users via api added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
+        logger.info(f'Updated Users via api added {newUsers.shape[0]} and changed {changedUsers.shape[0]}')
     
     except Exception as e:
-        print(f'refreshing users via api error: {e}')
+        logger.info(f'refreshing users via api error: {e}')
 
 
 def updateDeletedUsers():
@@ -128,16 +128,16 @@ def updateDeletedUsers():
                 deleted_df['member_id'] = deleted_df['member_id'].astype(np.int32)
 
                 users = performWithFileLock(USER_URI, lambda : pd.read_feather(USER_URI))
-                print(f'old num users: {len(users)}')
+                logger.info(f'old num users: {len(users)}')
                 oldLength = len(users)
                 users = users[~users.member_id.isin(deleted_df.member_id)].reset_index(drop=True)
-                print(f'new num users: {len(users)}')
+                logger.info(f'new num users: {len(users)}')
                 performWithFileLock(USER_URI, lambda: users.to_feather(USER_URI))
-                print(f'deleted {oldLength - len(users)} users')
+                logger.info(f'deleted {oldLength - len(users)} users')
             else:
-                print(f'No users to delete!')
+                logger.info(f'No users to delete!')
         except Exception as e:
-            print(f'refreshing deleted users via api error: {e}')
+            logger.info(f'refreshing deleted users via api error: {e}')
 
 def updateInterest():
     global logger

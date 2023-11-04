@@ -83,8 +83,39 @@ def activateUser(member_id : int):
                 file.write(str(member_id) + '\n')
     performWithFileLock(USER_ACTIVATION_FILE, activationFunc)
 
+
+"""
+NOT IN USE
+USER_CATEGORY_LIMITS = {
+ 'caste': 644,
+ 'employed': 8,
+ 'highest_education': 466,
+ 'income': 20,
+ 'occupation': 545,
+ 'permanent_country': 146,
+ 'permanent_state': 50,
+ 'sect': 4,
+}
+"""
+
+USER_CATEGORY_LIMITS = {
+ 'caste': 700,
+ 'employed': 20,
+ 'highest_education': 500,
+ 'income': 30,
+ 'occupation': 600,
+ 'permanent_country': 200,
+ 'permanent_state': 100,
+ 'sect': 20,
+}
+
 def getReducedUsers():
     reducedUsers = performWithFileLock(USERS_URI, lambda : pd.read_feather(USERS_URI))
+
+    for col, limit in USER_CATEGORY_LIMITS.items():
+	    allowedVals = reducedUsers[col].value_counts().nlargest(limit).index
+	    reducedUsers.loc[~reducedUsers[col].isin(allowedVals), col] = 'Others'
+
     reducedUsers['lastActiveDate'] = reducedUsers.lastonline.apply(datetime.date.fromtimestamp)
     reducedUsers['monthYear'] = (
         reducedUsers.lastonline.apply(lambda x: datetime.date.fromtimestamp(x).year).astype(str) +
@@ -324,7 +355,7 @@ def createRecommendationResults(member_id, senderIsFemme, offset, count, withInf
     timer.check('Calculating base score')
 
     scoredUsers = pd.DataFrame(
-        {'member_id': oneHotTieredUsers.member_id.sparse.to_dense(), 'score': scores})
+            {'member_id': oneHotTieredUsers.member_id, 'score': scores}).sparse.to_dense()
 
     predictions = pd.merge(
         scoredUsers[['member_id', 'score']],
@@ -388,6 +419,7 @@ def recommendation():
 
     formUserData = json.loads(request.form['userData'])
     if 'gender' not in formUserData:
+        logger.error(f'invalid userData: {formUserData}')
         return f'Input userData has no key gender', 400
     
     formGender = str(formUserData['gender']).lower()
