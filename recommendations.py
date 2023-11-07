@@ -413,8 +413,10 @@ def recommendation():
     try:
         member_id = int(request.form['member_id'])
     except ValueError as verr:
+        logger.error("Recommendation: Exception Encountered: supplied 'member_id' is not an integer!");
         return "Recommendation: Exception Encountered: supplied 'member_id' is not an integer!", 400
     except Exception as exc:
+        logger.error("Recommendation: Invalid input!")
         return "Recommendation: Invalid input!", 400
 
     formUserData = json.loads(request.form['userData'])
