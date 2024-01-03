@@ -447,7 +447,9 @@ def recommendation():
 
     gc.collect()
     activateUser(member_id=member_id)
-    return createRecommendationResults(member_id=member_id, senderIsFemme=senderIsFemme, errors=errors, **controlParams)
+    resultResponse = createRecommendationResults(member_id=member_id, senderIsFemme=senderIsFemme, errors=errors, **controlParams)
+    #logger.info(str(resultResponse))
+    return resultResponse
 
 TESTING_WEBSITE_PATH = 'nf-recs-svelte/dist/'
 
