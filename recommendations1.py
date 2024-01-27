@@ -16,7 +16,6 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-
 from scripts.utils import Timer, performWithFileLock
 
 import logging
@@ -65,13 +64,13 @@ def topLevelCatcher(action_func):
             return f'Internal Error: {e}', 400
     return wrapper
 
-# UPDATION_URI = 'userUpdation.csv'
+UPDATION_URI = 'userUpdation.csv'
 USERS_URI = 'userExport.feather'
-INTEREST_URI = 'newInterestExport.feather'
+INTEREST_URI = 'interestExport.feather'
 
-# UPDATED_USERS_COLUMN_FORMAT = performWithFileLock(UPDATION_URI, lambda: pd.read_csv(UPDATION_URI, nrows=0).columns.tolist())
-# def addUpdation(updatedUser : pd.DataFrame) -> None:
-#     performWithFileLock(UPDATION_URI, lambda : updatedUser.drop(columns=['lastActiveDate', 'monthYear'])[UPDATED_USERS_COLUMN_FORMAT].to_csv(UPDATION_URI, mode='a', index=False, header=False))
+UPDATED_USERS_COLUMN_FORMAT = performWithFileLock(UPDATION_URI, lambda: pd.read_csv(UPDATION_URI, nrows=0).columns.tolist())
+def addUpdation(updatedUser : pd.DataFrame) -> None:
+    performWithFileLock(UPDATION_URI, lambda : updatedUser.drop(columns=['lastActiveDate', 'monthYear'])[UPDATED_USERS_COLUMN_FORMAT].to_csv(UPDATION_URI, mode='a', index=False, header=False))
 
 USER_ACTIVATION_FILE = 'userActivation.list'
 def activateUser(member_id : int):
@@ -100,12 +99,12 @@ USER_CATEGORY_LIMITS = {
 """
 
 USER_CATEGORY_LIMITS = {
- 'caste': 100,
+ 'caste': 700,
  'employed': 20,
- 'highest_education': 100,
+ 'highest_education': 500,
  'income': 30,
- 'occupation': 100,
- 'permanent_country': 100,
+ 'occupation': 600,
+ 'permanent_country': 200,
  'permanent_state': 100,
  'sect': 20,
 }
@@ -114,8 +113,8 @@ def getReducedUsers():
     reducedUsers = performWithFileLock(USERS_URI, lambda : pd.read_feather(USERS_URI))
 
     for col, limit in USER_CATEGORY_LIMITS.items():
-        allowedVals = reducedUsers[col].value_counts().nlargest(limit).index
-        reducedUsers.loc[~reducedUsers[col].isin(allowedVals), col] = 'Others'
+	    allowedVals = reducedUsers[col].value_counts().nlargest(limit).index
+	    reducedUsers.loc[~reducedUsers[col].isin(allowedVals), col] = 'Others'
 
     reducedUsers['lastActiveDate'] = reducedUsers.lastonline.apply(datetime.date.fromtimestamp)
     reducedUsers['monthYear'] = (
@@ -457,7 +456,6 @@ TESTING_WEBSITE_PATH = 'nf-recs-svelte/dist/'
 @app.route('/test', methods=['GET'])
 def testingWebsite():
     return send_file(f'{TESTING_WEBSITE_PATH}index.html')
-    #print('maaz')
 
 @app.route('/assets/<path:path>')
 def send_asset(path):
@@ -467,4 +465,3 @@ def send_asset(path):
 @topLevelCatcher
 def home():
     return """<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><title>nf!</title><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="description" content="" /></head><body><h1>nf-recommendation api!</h1></body></html>"""
-

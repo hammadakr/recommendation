@@ -3,16 +3,16 @@ echo pulling from git
 git pull origin
 . venv/bin/activate
 echo installing dependencies
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
 echo killing already running server
 echo launching server
 if test -e '/var/run/gunicorn.pid'
 then
 	echo restarting with hangup signal
-	cat /var/run/gunicorn.pid | xargs kill -HUP
+	sudo cat /var/run/gunicorn.pid | xargs kill -HUP
 else
 	echo server was down, relaunching!
-	gunicorn -c config/gunicorn_config.py main:app
+	sudo gunicorn -c config/gunicorn_config.py main:app
 fi
 
 if test -e '/var/run/gunicorn.pid'
